@@ -1,0 +1,16 @@
+{
+  "name": "NutriLog",
+  "short_name": "NutriLog",
+  "description": "AI-powered macro tracker",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0f0b",
+  "theme_color": "#0b0f0b",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
