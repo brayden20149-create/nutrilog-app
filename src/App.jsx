@@ -288,7 +288,7 @@ export default function App() {
     }
 
     try {
-      const result = await callAssistant(apiMsgs, settings.aiStyle);
+      const result = await callAssistant(apiMsgs, settings.aiStyle, settings.webSearch);
       const {message="",actions=[],mode="general",workoutStatus="none",standout:isStandout=false} = result;
 
       const curWkNow = workouts[selDay]||[];
