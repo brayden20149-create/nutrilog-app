@@ -1,9 +1,16 @@
 import { useState, useEffect, useRef } from "react";
 
 
-export const APP_VERSION = "1.4.1";
+export const APP_VERSION = "1.5.0";
 
 export const CHANGELOG = [
+  { version:"1.5.0", date:"Jun 2026", notes:[
+    { text:"Food logging can search the web for real restaurant nutrition data", action:"settings" },
+    { text:"Toggle web search on/off to control extra API usage", action:"settings" },
+    { text:"Rigorous portion-and-macro estimation method for all food", action:"chat" },
+    { text:"Low-confidence estimates now flagged with a ~est badge", action:"log" },
+    { text:"Expanded Chick-fil-A and McDonald's menu accuracy", action:"chat" },
+  ]},
   { version:"1.4.1", date:"Jun 2026", notes:[
     { text:"Smarter lift matching — variations of a lift count as the same", action:"workouts" },
     { text:"Rename a lift to merge its history across all days", action:"workouts" },
@@ -121,6 +128,7 @@ export const DEFAULT_SETTINGS = {
   celebrations:true,
   landingTab:"chat",    // chat | log | workouts | train
   aiStyle:"balanced",   // concise | balanced | detailed
+  webSearch:true,       // let the AI search the web for restaurant/brand nutrition data
 };
 export const loadSettings = () => { try { return {...DEFAULT_SETTINGS, ...JSON.parse(dualLoadRaw("nl4_settings")||"{}")}; } catch { return {...DEFAULT_SETTINGS}; } };
 export const saveSettings = s  => dualSave("nl4_settings", JSON.stringify(s));
@@ -537,7 +545,7 @@ export const styleHint = (aiStyle) => {
 
 export async function fetchChat(body) {
   const ctrl = new AbortController();
-  const timer = setTimeout(()=>ctrl.abort(), 30000);
+  const timer = setTimeout(()=>ctrl.abort(), body?.useSearch ? 45000 : 30000);
   try {
     const res = await fetch("/api/chat", {
       method: "POST",
@@ -556,43 +564,6 @@ export async function fetchChat(body) {
   } finally {
     clearTimeout(timer);
   }
-}
-
-export async function callClaude(messages, aiStyle) {
-  const SYSTEM = [
-    "You are NutriLog AI, a macro tracking assistant. You control the user food log.",
-    "IMPORTANT: Reply with ONLY a JSON object. No markdown. No backticks. No prose. Start with { end with }.",
-    "Format: {" + '"message":"your reply","actions":[]}',
-    "Actions you may include:",
-    '  add food:    {"type":"add_entry","entry":{"name":"Full Brand Name","calories":0,"protein":0,"carbs":0,"fat":0,"source":"https://..."}}',
-    "The 'source' field is OPTIONAL and only for branded or restaurant items that have an official published nutrition page (e.g. the brand's own site or official nutrition PDF). Include a real, specific URL you are confident exists for that item. For generic/whole foods you are estimating (e.g. 'an apple', 'grilled chicken'), DO NOT include a source field — leave it out entirely. Never invent or guess URLs; omit the field if unsure.",
-    '  remove food: {"type":"remove_entry","name":"partial name"}',
-    '  clear day:   {"type":"clear_log"}',
-    '  edit goals:  {"type":"update_goals","goals":{"calories":0,"protein":0,"carbs":0,"fat":0}}',
-    "If the user sends a PHOTO of food, identify each item and estimate realistic macros from what you see (portion sizes, ingredients). If it's a nutrition label, read the values directly. Create add_entry actions for what's pictured and briefly note in the message that values are estimated from the photo.",
-    "You handle FOOD only. If the user mentions a workout or exercise, tell them briefly to log it in the Trainer tab — do not create workout actions here.",
-    "Use official menu nutrition data for all restaurants and brands.",
-    "Common items: CFA Original Sandwich 470cal/29P/41C/19F, CFA Spicy Deluxe 550cal/34P/45C/24F, CFA Med Waffle Fries 400cal/5P/48C/21F, McBig Mac 563cal/25P/45C/33F, McDouble Cheeseburger 450cal/25P/34C/24F.",
-    "The user has a personal MEAL PREP LIBRARY of custom meals, provided in the [STATE] context as MealLibrary. Each meal has a name and exact per-container macros.",
-    "When the user says to log one of their meals (e.g. 'log a chicken and rice container', 'add 2 of my chicken bowls', 'log my meal prep'), MATCH it to a meal in MealLibrary by name (fuzzy match is fine) and use that meal's EXACT per-container macros. Add one add_entry per container requested (default 1). Name the entry exactly as the meal name.",
-    "If they ask to log a quantity like '2 containers', add that many add_entry actions.",
-    "If a spoken meal isn't in their library, say so briefly and suggest they create it in the Meals tab.",
-    "If UserProfile is provided in context (age, sex, weight, goals, diet prefs, allergies, restrictions), use it to tailor portion estimates and any food suggestions. Respect allergies and dietary restrictions strictly when suggesting foods.",
-    "If UserName is provided, address the person by their first name naturally and occasionally — not in every line. If Habits are provided (their average daily macros and frequently logged foods), use them: recognize repeat foods, and make suggestions consistent with what they actually eat.",
-    "The message field must be PLAIN TEXT BULLET POINTS ONLY. Every line starts with '- '. No headers, no bold, no tables. One bullet per food item with its macros, plus optional brief bullets for totals or feedback. Nothing outside the bullets.",
-    "Return ONLY the JSON object.",
-    styleHint(aiStyle),
-  ].join(" ");
-
-  const data = await fetchChat({ system: SYSTEM, messages });
-  const raw = (data.content || []).map(b => b.text || "").join("").trim();
-
-  try { return JSON.parse(raw); } catch {}
-  const s = raw.replace(/^```[\w]*\s*/,"").replace(/\s*```$/,"").trim();
-  try { return JSON.parse(s); } catch {}
-  const m = raw.match(/{[\s\S]*}/);
-  if (m) { try { return JSON.parse(m[0]); } catch {} }
-  return { message: raw.length > 0 ? raw.slice(0, 300) : "Something went wrong. Please try again.", actions: [] };
 }
 
 export async function estimateIngredients(ingredientNames) {
@@ -628,82 +599,41 @@ export async function estimateIngredients(ingredientNames) {
   });
 }
 
-export async function callTrainer(messages, aiStyle) {
-  const SYSTEM = [
-    "You are a strength coach inside a fitness app. You both LOG the user's workouts and give coaching feedback.",
-    "TONE: Direct, technical, matter-of-fact. Do NOT use hype, excessive praise, or flattery ('crushing it', 'beast mode', 'amazing job'). Also do NOT be harsh or drill-sergeant. Treat the user as a capable adult. Neutral, useful, a little dry is the target.",
-    "You MUST respond with ONLY a JSON object — no markdown, no backticks, no text outside it:",
-    '{"message":"your coaching reply","actions":[],"workoutStatus":"none|partial|complete","standout":false}',
-    "workoutStatus: judge whether what they logged THIS session amounts to a COMPLETE workout RELATIVE TO THEIR EXPERIENCE LEVEL (from USER PROFILE 'experience'). If no experience is given, treat them as Beginner. Rough bar for a complete session: Beginner ≈ 2-3 solid exercises or ~20+ minutes of real work; Intermediate ≈ 4-5 exercises covering a session's worth; Advanced ≈ a full targeted session (5-6+ exercises or high total volume). Use 'complete' if they meet or exceed their level's bar, 'partial' if they've logged something but it's below the bar, 'none' if they logged nothing (just a question). Be reasonable, not stingy.",
-    "standout: set true ONLY when this session shows a clear personal record (more weight/reps than their history on a lift) OR a big jump in total volume versus their usual — something genuinely notable. Otherwise false. Requires workout history to compare; if there's no history to compare against, keep standout false. Don't hand it out for ordinary good sessions.",
-    "Actions you may include:",
-    '  add workout: {"type":"add_workout","workout":{"name":"Bench Press","detail":"185 lbs × 8","category":"strength"}}',
-    '  remove workout: {"type":"remove_workout","name":"partial name"}',
-    '  save program: {"type":"save_program","program":{"name":"4-Day PPL","days":[{"name":"Push","exercises":[{"name":"Bench Press","sets":[{"weight":"185 lbs","reps":"8"},{"weight":"185 lbs","reps":"8"},{"weight":"185 lbs","reps":"6"}],"notes":""}]}]}}',
-    "When the user asks you to build or design a workout program/plan, use save_program. Each day has a name and exercises. Each exercise has a name, a notes string, and a 'sets' ARRAY where every element is one set with its own weight and reps. List each set individually — do NOT use a set count with shared reps/weight.",
-    "LOGGING RULES (follow exactly): Create ONE add_workout per individual SET, not per exercise. If an exercise has 3 sets, emit 3 add_workout actions with the SAME name. Each set's detail is ONLY 'WEIGHT × REPS' (e.g. '185 lbs × 8'), or for bodyweight 'BW × 12', for cardio the distance/time. NEVER put multiple sets in one detail string. NEVER duplicate a set. NEVER add words like 'ramping', 'top set', 'warmup', or any commentary in the detail — just weight × reps. Example: user says 'lat pulldown 150x10, 167.5x9, 185x8' → emit 3 actions, details '150 lbs × 10', '167.5 lbs × 9', '185 lbs × 8'. category = strength|cardio|mobility|sport.",
-    "In the SAME message, also coach: 1) If workout history is provided, compare this session to previous performance on the same lift (load, volume, reps) and state the change plainly. 2) Give 1-2 concrete technical/mental cues for the lift. 3) If relevant, a brief specific suggestion for next session grounded in progressive overload, without being pushy.",
-    "If they only ask a question (no lift to log), answer it technically with an empty actions array.",
-    "If a USER PROFILE is provided, scale expectations and progression to their experience, weekly frequency, and goal. If wingspanIn (arm span in inches) and height are present, factor limb leverages into form cues — e.g. longer arms mean a longer bench/deadlift range of motion and may favor certain grip widths or stances; mention this only when it's actually relevant to the lift being discussed.",
-    "If a USER NAME is provided, use their first name naturally now and then (not every message). If TRAINING HABITS are provided (their usual training days and frequent exercises), reference them when relevant — e.g. note if they're training a muscle they usually skip, or breaking from their normal split.",
-    "If the user sends a PHYSIQUE PHOTO, give an honest, technical assessment: note developed areas and lagging/weak points, estimate visible conditioning, and recommend which muscle groups or training focus to prioritize. Be specific and constructive — no flattery, no body-shaming, no health/medical claims, no body-fat percentage guarantees. Keep it about training priorities. Use an empty actions array for photo assessments unless they also reported a lift.",
-    "Keep the message concise and skimmable — a few short lines. Plain text inside the message field (line breaks ok, no markdown symbols).",
-    "Return ONLY the JSON object.",
-    styleHint(aiStyle),
-  ].join(" ");
-
-  const data = await fetchChat({ system: SYSTEM, messages });
-  const raw = (data.content || []).map(b => b.text || "").join("").trim();
-  const clean = raw.replace(/^```[\w]*\s*/,"").replace(/\s*```$/,"").trim();
-  try { return JSON.parse(clean); } catch {}
-  const m = clean.match(/\{[\s\S]*\}/);
-  if (m) { try { return JSON.parse(m[0]); } catch {} }
-  return { message: raw || "Give me the lift and the numbers.", actions: [] };
-}
-
-export async function callChef(messages, aiStyle) {
-  const SYSTEM = [
-    "You are a practical meal-prep chef and nutrition assistant inside a fitness app. You help the user design meal preps and answer general nutrition questions (macros of foods, substitutions, protein sources, fiber, micronutrients, cooking methods, etc.).",
-    "TONE: Friendly, practical, concise. Real food and real numbers, not fluff.",
-    "You MUST respond with ONLY a JSON object — no markdown, no backticks, no text outside it:",
-    '{"message":"your reply","actions":[]}',
-    "When you propose a meal prep the user wants to save, include a save_meal action so it goes into their library:",
-    '  {"type":"save_meal","meal":{"name":"Chicken & Rice Bowls","containers":5,"ingredients":[{"name":"2 lbs chicken breast","calories":1090,"protein":204,"carbs":0,"fat":24},{"name":"3 cups cooked white rice","calories":615,"protein":13,"carbs":135,"fat":1}]}}',
-    "ingredients carry the TOTAL macros for the whole batch (not per container). containers = how many servings the batch makes. Use accurate USDA values. Only include a save_meal action when the user actually wants to save/create the prep — otherwise just discuss in the message.",
-    "When designing a prep, briefly show the per-container macro estimate in the message so they know what they're getting.",
-    "For general nutrition questions, answer directly with numbers where useful. Use the message field, empty actions array.",
-    "If a USER PROFILE or goals are provided, tailor prep suggestions to their calorie/protein targets and respect allergies/restrictions strictly.",
-    "Keep the message readable plain text (line breaks fine, no markdown symbols like ** or #).",
-    "Return ONLY the JSON object.",
-    styleHint(aiStyle),
-  ].join(" ");
-
-  const data = await fetchChat({ system: SYSTEM, messages });
-  const raw = (data.content || []).map(b => b.text || "").join("").trim();
-  const clean = raw.replace(/^```[\w]*\s*/,"").replace(/\s*```$/,"").trim();
-  try { return JSON.parse(clean); } catch {}
-  const m = clean.match(/\{[\s\S]*\}/);
-  if (m) { try { return JSON.parse(m[0]); } catch {} }
-  return { message: raw || "Tell me what you'd like to prep or ask a nutrition question.", actions: [] };
-}
-
 // ── Unified assistant: one brain that detects intent and handles food, workouts,
 // meal preps, and general questions in a single thread. Returns a `mode` tag.
-export async function callAssistant(messages, aiStyle) {
+export async function callAssistant(messages, aiStyle, useSearch=false) {
   const SYSTEM = [
     "You are NutriLog AI — a single unified fitness assistant. You handle FOUR domains from one conversation: logging FOOD, logging WORKOUTS & building programs, designing MEAL PREPS, and answering GENERAL nutrition/training questions. Read each message and decide what the user needs.",
     "You MUST reply with ONLY a JSON object — no markdown, no backticks, no text outside it. Start with { end with }.",
     'Format: {"message":"your reply","mode":"food|workout|meal|general","actions":[],"workoutStatus":"none|partial|complete","standout":false}',
     "Set 'mode' to the domain this reply is mainly about so the app can tag it. workoutStatus and standout only matter for workout mode (use 'none'/false otherwise).",
+    useSearch
+      ? "WEB SEARCH is available to you this turn. Use it for branded/restaurant nutrition facts you're not fully certain of, rather than guessing — search their official nutrition page. Don't search for well-known homemade/generic food macros; use your knowledge for those to save time. After searching, still return ONLY the final JSON object as your last message — never leave a search as your final output."
+      : "Web search is OFF this turn — you must answer from your own knowledge only. For branded/restaurant items, use the ANCHOR MENUS below when the item is listed; otherwise give your best recalled estimate and set confidence:'low' if you're not fully sure.",
     "",
     "── FOOD LOGGING (mode:food) ──",
-    '  add food: {"type":"add_entry","entry":{"name":"Full Brand Name","calories":0,"protein":0,"carbs":0,"fat":0,"source":"https://..."}}',
-    "  The 'source' field is OPTIONAL, only for branded/restaurant items with a real official nutrition page. Never invent URLs; omit if unsure. For generic/whole foods, omit source.",
+    '  add food: {"type":"add_entry","entry":{"name":"Full Item Name","calories":0,"protein":0,"carbs":0,"fat":0,"source":"https://...","confidence":"high|medium|low"}}',
+    "  The 'source' field is OPTIONAL, only for branded/restaurant items with a real official nutrition page you're confident exists (a URL you found via search, if search was used). Never invent URLs; omit if unsure. For generic/whole foods, omit source.",
+    "  'confidence': high = exact label/menu/searched data or a weighed amount; medium = a well-defined food with a stated or clearly standard portion; low = a vague description where you had to assume the portion or you're unsure of the brand data.",
     '  remove food: {"type":"remove_entry","name":"partial name"}   clear day: {"type":"clear_log"}   edit goals: {"type":"update_goals","goals":{"calories":0,"protein":0,"carbs":0,"fat":0}}',
-    "  If the user sends a PHOTO of food, identify each item and estimate realistic macros (or read a nutrition label directly); note values are estimated.",
-    "  Use official menu data for restaurants/brands. CFA Original Sandwich 470/29/41/19, CFA Spicy Deluxe 550/34/45/24, CFA Med Waffle Fries 400/5/48/21, Big Mac 563/25/45/33, McDouble 450/25/34/24.",
-    "  The user has a MEAL PREP LIBRARY (MealLibrary in [STATE]) with exact per-container macros. If they say to log one of their meals, fuzzy-match by name and add one add_entry per container (default 1) using those exact macros.",
-    "  For food replies, the message should be plain-text bullet lines starting with '- ', one per item with its macros.",
+    "",
+    "  ESTIMATION METHOD — follow in order for every food item:",
+    "  1. IDENTIFY the item precisely: branded/restaurant, packaged with a label, or homemade/generic? Note the cooking state (raw/cooked/fried/grilled) since it changes weight and calories substantially.",
+    "  2. DETERMINE the portion. If the user gave a weight/volume/count, use it exactly (convert to grams: 1 lb=453.6g, 1 oz=28.35g, 1 cup varies by food — cooked rice ≈185g/cup, cooked pasta ≈140g/cup, chopped veg ≈120g/cup). If NO portion was given, assume the single most common real-world serving for that exact food (a medium banana ≈118g, a large egg ≈50g, a chicken breast ≈170g cooked, a slice of bread ≈28g) — the realistic default a person would actually eat, not a minimal 'safe' guess.",
+    "  3. SOURCE the macros: for branded/restaurant items, search if available (see above) or use the ANCHOR MENUS below; for generic whole foods use standard USDA per-100g reference values (chicken breast cooked ≈165cal/31P/0C/3.6F per 100g; white rice cooked ≈130cal/2.7P/28C/0.3F per 100g; salmon cooked ≈208cal/22P/0C/13F per 100g; olive oil ≈884cal/0/0/100F per 100g so 1 tbsp≈120cal/14F; avocado ≈160cal/2P/9C/15F per 100g).",
+    "  4. SCALE per-100g values by (grams ÷ 100) to reach the total for the actual portion — compute this, don't eyeball it.",
+    "  5. SELF-CHECK: verify calories ≈ protein×4 + carbs×4 + fat×9 (within ~10%). If it doesn't reconcile, recompute rather than reporting inconsistent numbers.",
+    "  6. If the portion was genuinely ambiguous (no amount given, no obvious standard serving — 'a bowl of pasta', 'some chicken'), state your portion assumption briefly in the message (e.g. 'assumed ~1.5 cups') so the user can correct it. Don't add this note for items with a clear standard serving or an exact amount given.",
+    "",
+    "  ANCHOR MENUS (use these when search is off or doesn't return a clean match):",
+    "  Chick-fil-A — Original Sandwich 440cal/28P/41C/19F · Spicy Sandwich 450cal/28P/41C/20F · Grilled Sandwich 320cal/28P/41C/6F · 8ct Nuggets 250cal/27P/11C/12F · 8ct Grilled Nuggets 130cal/25P/2C/2F · 12ct Nuggets 380cal/40P/16C/18F · Medium Waffle Fries 420cal/5P/45C/24F · Large Waffle Fries 520cal/6P/56C/30F · Cobb Salad w/ grilled 500cal/40P/25C/28F · Mac & Cheese (medium) 450cal/17P/33C/28F · Chick-fil-A Sauce (1oz) 140cal/0P/5C/13F · Polynesian Sauce (1oz) 110cal/0P/13C/7F.",
+    "  McDonald's — Big Mac 590cal/25P/46C/34F · McDouble 400cal/22P/33C/20F · Quarter Pounder w/Cheese 520cal/30P/41C/26F · 10pc McNuggets 420cal/23P/25C/26F · Medium Fries 320cal/4P/43C/15F · Large Fries 480cal/6P/64C/23F · Egg McMuffin 310cal/17P/30C/13F · Sausage McMuffin w/Egg 480cal/21P/30C/31F · Hash Brown 150cal/1P/15C/9F.",
+    "  For any OTHER restaurant/brand: search if available; otherwise use your best recall and set confidence:'low' if unsure, saying so briefly.",
+    "",
+    "  If the user sends a PHOTO of food, identify each item, estimate the portion from visual cues (plate size, comparison to hand/utensils), apply the method above, and set confidence to 'low' or 'medium' since it's visual — note briefly it's a visual estimate.",
+    "  If the photo is a nutrition label, read the values directly (confidence 'high') and ask how many servings if that's ambiguous from the photo.",
+    "  The user has a MEAL PREP LIBRARY (MealLibrary in [STATE]) with exact per-container macros (confidence 'high', precomputed). If they say to log one of their meals, fuzzy-match by name and add one add_entry per container (default 1) using those exact macros.",
+    "  For food replies, the message should be plain-text bullet lines starting with '- ', one per item with its macros. Only mention confidence/assumptions when relevant (low confidence, an unstated portion you had to pick) — don't clutter a clear, exact log with caveats.",
     "",
     "── WORKOUT LOGGING & PROGRAMS (mode:workout) ──",
     "  TONE for workouts: direct, technical, matter-of-fact. No hype or flattery, no drill-sergeant. Capable-adult tone.",
@@ -730,7 +660,7 @@ export async function callAssistant(messages, aiStyle) {
     styleHint(aiStyle),
   ].join(" ");
 
-  const data = await fetchChat({ system: SYSTEM, messages });
+  const data = await fetchChat({ system: SYSTEM, messages, useSearch });
   const raw = (data.content || []).map(b => b.text || "").join("").trim();
   let parsed = null;
   try { parsed = JSON.parse(raw); } catch {}
@@ -893,7 +823,15 @@ export const EntryRow = ({entry,onDelete,onEdit}) => {
           style={{flex:1,minWidth:0,background:"none",border:"none",textAlign:"left",
             cursor:"pointer",padding:0,WebkitTapHighlightColor:"transparent"}}>
           <div style={{fontSize:14,color:T.text,fontWeight:600,marginBottom:4,
-            whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{entry.name}</div>
+            whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",
+            display:"flex",alignItems:"center",gap:5}}>
+            <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{entry.name}</span>
+            {entry.confidence==="low" && (
+              <span title="Estimated — portion or macros uncertain"
+                style={{fontSize:9,color:T.warn,border:`1px solid ${T.warn}66`,
+                  borderRadius:99,padding:"1px 6px",flexShrink:0,fontWeight:700}}>~est</span>
+            )}
+          </div>
           <div style={{display:"flex",gap:12}}>
             {[["cal",entry.calories,T.cal],["P",entry.protein,T.protein],
               ["C",entry.carbs,T.carbs],["F",entry.fat,T.fat]].map(([l,v,col])=>(
@@ -1943,6 +1881,9 @@ export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, on
         <Seg value={settings.aiStyle}
           options={[["concise","Short"],["balanced","Balanced"],["detailed","Detailed"]]}
           onPick={v=>onSet("aiStyle",v)}/>
+      </Row>
+      <Row label="Web search for food" sub="Look up real menu data for restaurants — uses extra API usage on your key">
+        <Toggle on={settings.webSearch} onClick={()=>onSet("webSearch",!settings.webSearch)}/>
       </Row>
 
       {/* Barcode cache management */}
