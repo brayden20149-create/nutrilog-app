@@ -1,3 +1,4 @@
+import { barcodeNutrition, scaleNutrition, MACROS } from "./nutrition.js";
 import { useState, useEffect, useRef } from "react";
 
 
@@ -253,22 +254,7 @@ export async function lookupBarcode(code) {
   if (!res.ok) throw new Error("lookup failed");
   const data = await res.json();
   if (data.status !== 1 || !data.product) return null;
-  const p = data.product;
-  const n = p.nutriments || {};
-  const hasServing = n["energy-kcal_serving"] != null || n.proteins_serving != null;
-  const g = (servingKey, hundredKey) => {
-    const v = hasServing ? n[servingKey] : n[hundredKey];
-    return v != null ? Math.round(v) : 0;
-  };
-  const name = [p.brands?.split(",")[0]?.trim(), p.product_name].filter(Boolean).join(" ") || "Scanned item";
-  return {
-    name,
-    calories: g("energy-kcal_serving","energy-kcal_100g"),
-    protein:  g("proteins_serving","proteins_100g"),
-    carbs:    g("carbohydrates_serving","carbohydrates_100g"),
-    fat:      g("fat_serving","fat_100g"),
-    basis: hasServing ? (p.serving_size || "per serving") : "per 100g",
-  };
+  return barcodeNutrition(data.product);
 }
 
 export let HAPTICS_ON = true;
@@ -1732,99 +1718,38 @@ export const BarcodeScanner = ({ onDetected, onClose }) => {
 };
 
 export const ScanConfirm = ({ initial, code, notFound, onLog, onClose }) => {
-  const [d, setD] = useState(initial || {name:"",calories:"",protein:"",carbs:"",fat:""});
-  const set = (k,v)=>setD(p=>({...p,[k]:v}));
-  const [servingAmt, setServingAmt] = useState("");
-  const [servingUnit, setServingUnit] = useState("g");
-  const [servingCount, setServingCount] = useState(1);
-  const numF = {background:T.bg,border:`1px solid ${T.border}`,borderRadius:8,
-    padding:"9px 4px",color:T.text,fontSize:15,textAlign:"center",width:"100%",outline:"none",fontWeight:700};
-  const canLog = d.name.trim();
-  const UNITS = ["g","oz","mL","cup","tbsp","tsp","piece","serving"];
+  const [d, setD] = useState(() => ({...initial, name:initial?.name || "", basisGrams:initial?.basisGrams || "",
+    ...Object.fromEntries(MACROS.map(k => [k, initial?.nutritionVersion === 2 ? (initial?.[k] ?? "") : ""]))}));
+  const [amount, setAmount] = useState("1");
+  const [unit, setUnit] = useState("servings");
+  const set = (k,v) => setD(p=>({...p,[k]:v}));
+  const total = scaleNutrition(d, amount, unit);
+  const valid = Boolean(d.name.trim() && total);
+  const field = {boxSizing:"border-box",width:"100%",background:T.bg,border:`1px solid ${T.border}`,borderRadius:8,padding:10,color:T.text,fontSize:16};
+  const label = {display:"block",fontSize:14,marginBottom:12};
   const submit = () => {
-    if (!canLog) return;
-    const n = Math.max(1, Math.round(+servingCount)||1);
-    const serving = servingAmt && +servingAmt>0 ? ` (${+servingAmt} ${servingUnit})` : "";
-    onLog({
-      name:d.name.trim()+serving+(n>1?` x${n}`:""),
-      calories:(+d.calories||0)*n, protein:(+d.protein||0)*n,
-      carbs:(+d.carbs||0)*n, fat:(+d.fat||0)*n,
-    });
+    if (!valid) return;
+    const base = {...d, ...Object.fromEntries(MACROS.map(k=>[k,Number(d[k])])),
+      name:d.name.trim(), basisGrams:Number(d.basisGrams)>0?Number(d.basisGrams):null, nutritionVersion:2};
+    const portion = `${Number(amount)} ${unit}`;
+    onLog({...total,name:`${base.name} (${portion})`,quantity:Number(amount),quantityUnit:unit,barcode:code}, base);
   };
-  return (
-    <div onClick={onClose} style={{position:"fixed",inset:0,background:T.overlay,zIndex:545,
-      display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
-      <div onClick={e=>e.stopPropagation()}
-        style={{background:T.surface,border:`1px solid ${T.accent}55`,borderRadius:18,
-          padding:"20px",maxWidth:360,width:"100%",boxShadow:`0 10px 50px #000a`,
-          maxHeight:"86vh",overflowY:"auto"}}>
-        <div style={{fontSize:11,color:T.accent,letterSpacing:"0.12em",marginBottom:4}}>
-          {notFound ? "NOT IN DATABASE — ENTER MANUALLY" : "SCANNED PRODUCT"}
-        </div>
-        <div style={{fontSize:11,color:T.muted,marginBottom:14}}>
-          {initial?.basis ? `Values ${initial.basis}. ` : ""}
-          Edit anything, then log. We'll remember this barcode next time.
-        </div>
-        <input value={d.name} onChange={e=>set("name",e.target.value)}
-          placeholder="Product name"
-          style={{width:"100%",background:T.bg,border:`1px solid ${T.border}`,borderRadius:8,
-            padding:"10px 12px",color:T.text,fontSize:16,outline:"none",marginBottom:12}}/>
-        {/* Serving size — especially useful for unrecognized items */}
-        <div style={{fontSize:10,color:T.muted,marginBottom:5,letterSpacing:"0.06em"}}>
-          SERVING SIZE {notFound ? "" : "(optional)"}
-        </div>
-        <div style={{display:"flex",gap:8,marginBottom:14}}>
-          <input type="number" inputMode="decimal" value={servingAmt}
-            onChange={e=>setServingAmt(e.target.value)} placeholder="amount"
-            style={{flex:1,minWidth:0,background:T.bg,border:`1px solid ${T.border}`,borderRadius:8,
-              padding:"10px 12px",color:T.text,fontSize:16,outline:"none"}}/>
-          <select value={servingUnit} onChange={e=>setServingUnit(e.target.value)}
-            style={{background:T.bg,border:`1px solid ${T.border}`,borderRadius:8,
-              padding:"10px",color:T.text,fontSize:15,outline:"none",minWidth:92,
-              WebkitAppearance:"none",appearance:"none"}}>
-            {UNITS.map(u=><option key={u} value={u}>{u}</option>)}
-          </select>
-        </div>
-        {/* Number of servings to log */}
-        <div style={{fontSize:10,color:T.muted,marginBottom:5,letterSpacing:"0.06em"}}>HOW MANY SERVINGS?</div>
-        <div style={{display:"flex",gap:6,marginBottom:14}}>
-          {[1,2,3,4].map(n=>(
-            <button key={n} onClick={()=>setServingCount(n)}
-              style={{flex:1,background:servingCount===n?T.gAccent:T.card,
-                border:`1px solid ${servingCount===n?T.accent:T.border}`,
-                color:servingCount===n?"#0b0f0b":T.text,borderRadius:8,padding:"10px",
-                fontSize:14,fontWeight:700,cursor:"pointer",minHeight:40,
-                WebkitTapHighlightColor:"transparent"}}>{n}</button>
-          ))}
-          <input type="number" inputMode="numeric" min="1" value={servingCount}
-            onChange={e=>setServingCount(+e.target.value||1)}
-            style={{flex:1,background:T.bg,border:`1px solid ${T.border}`,borderRadius:8,
-              padding:"10px 4px",color:T.text,fontSize:14,fontWeight:700,textAlign:"center",outline:"none"}}/>
-        </div>
-        <div style={{display:"flex",gap:6,marginBottom:16}}>
-          {[["calories","cal",T.cal],["protein","P",T.protein],["carbs","C",T.carbs],["fat","F",T.fat]].map(([k,lbl,col])=>(
-            <div key={k} style={{flex:1}}>
-              <div style={{fontSize:9,color:col,textAlign:"center",marginBottom:3}}>{lbl}</div>
-              <input type="number" inputMode="numeric" value={d[k]} onChange={e=>set(k,e.target.value)} style={numF}/>
-            </div>
-          ))}
-        </div>
-        <div style={{display:"flex",gap:10}}>
-          <button onClick={onClose}
-            style={{flex:1,background:"none",border:`1px solid ${T.border}`,color:T.muted,
-              borderRadius:12,padding:"13px",cursor:"pointer",fontSize:14,minHeight:48,
-              WebkitTapHighlightColor:"transparent"}}>Cancel</button>
-          <button onClick={submit}
-            disabled={!canLog}
-            style={{flex:2,background:T.gAccent,border:"none",color:"#0b0f0b",
-              borderRadius:12,padding:"13px",cursor:"pointer",fontSize:14,fontWeight:700,minHeight:48,
-              opacity:canLog?1:0.4,WebkitTapHighlightColor:"transparent"}}>
-            Log it
-          </button>
-        </div>
-      </div>
+  return <div onClick={onClose} style={{position:"fixed",inset:0,background:T.overlay,zIndex:545,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+    <div role="dialog" aria-modal="true" aria-label="Scanned food" onClick={e=>e.stopPropagation()} style={{boxSizing:"border-box",background:T.surface,color:T.text,border:`1px solid ${T.border}`,borderRadius:18,padding:20,maxWidth:380,width:"100%",maxHeight:"86vh",overflowY:"auto"}}>
+      <h2 style={{fontSize:20,margin:"0 0 12px"}}>Scanned food</h2>
+      <p style={{fontSize:14,color:T.muted}}>Nutrition for one base serving{initial?.basis ? ` (${initial.basis})` : ""}. Check these values against the label.</p>
+      {initial && initial.nutritionVersion !== 2 && <p role="status" style={{fontSize:14,color:T.cal}}>Previously saved barcode: re-enter one serving from the label. Older saved values may include multiple servings.</p>}
+      {MACROS.some(k=>d[k]==="") && <p role="status" style={{fontSize:14,color:T.cal}}>Some nutrition values are missing. Enter them from the label, including any zeros.</p>}
+      <label style={label}>Product name<input style={field} value={d.name} onChange={e=>set("name",e.target.value)}/></label>
+      <label style={label}>Grams in one base serving (optional)<input style={field} type="number" min="0.001" step="any" inputMode="decimal" value={d.basisGrams} onChange={e=>set("basisGrams",e.target.value)}/></label>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>{MACROS.map(k=><label key={k} style={label}>{k === "calories" ? "Calories (kcal)" : `${k[0].toUpperCase()+k.slice(1)} (g)`}<input style={field} type="number" min="0" step="any" inputMode="decimal" value={d[k]} onChange={e=>set(k,e.target.value)}/></label>)}</div>
+      <label style={label}>Amount eaten<input style={field} type="number" min="0.001" step="any" inputMode="decimal" value={amount} onChange={e=>setAmount(e.target.value)}/></label>
+      <label style={label}>Measure in<select style={field} value={unit} onChange={e=>setUnit(e.target.value)}><option value="servings">Base servings</option><option value="g">Grams</option></select></label>
+      {unit === "g" && !(Number(d.basisGrams)>0) && <p style={{fontSize:14,color:T.cal}}>Enter the grams in one base serving to calculate by weight.</p>}
+      <div aria-live="polite" style={{padding:12,background:T.bg,borderRadius:10,marginBottom:16,fontSize:14}}>{total ? `${Math.round(total.calories)} kcal · ${total.protein.toFixed(1)} g protein · ${total.carbs.toFixed(1)} g carbs · ${total.fat.toFixed(1)} g fat` : "Complete the nutrition and amount to see your total."}</div>
+      <div style={{display:"flex",gap:10}}><button onClick={onClose} style={{...field,cursor:"pointer"}}>Cancel</button><button disabled={!valid} onClick={submit} style={{...field,background:T.accent,color:T.bg,opacity:valid?1:0.4,cursor:"pointer"}}>Log food</button></div>
     </div>
-  );
+  </div>;
 };
 
 export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, onClearData }) => {
