@@ -1,8 +1,12 @@
+import { undoFoodChange } from "./nutrition.js";
 import { useState, useEffect, useRef } from "react";
 import { APP_VERSION, T, applyTheme, loadTheme, saveTheme, DEFAULT_SETTINGS, loadSettings, saveSettings, toDisplayWeight, fromDisplayWeight, weightUnit, toDisplayWater, waterUnit, DEFAULT_GOALS, todayKey, isToday, fmtDate, fmtFull, _get, _set, loadAll, saveAll, loadGoals, saveGoals, loadMeals, saveMeals, loadPrograms, savePrograms, cleanWorkoutDay, loadWorkouts, saveWorkouts, loadStandout, saveStandout, loadWeights, saveWeights, loadWater, saveWater, WATER_STEP, loadBarcodes, saveBarcodes, HAPTICS_ON, haptic, setHapticsOn, DEFAULT_PROFILE, loadProfile, saveProfile, weekStart, addDays, weekDays, dowShort, dayNum, dayHitsGoal, sumDay, analyzeWorkoutDay, normName, computeStreak, mealPerContainer, InfoDot, Ring, Bar, EntryRow, Bubble, HistoryDrawer, MealEditor, ProfileTab, ProgramsTab, Confetti, Toast, BarcodeScanner, ScanConfirm, SettingsModal, WelcomeModal, lookupBarcode, computeHabits, callAssistant } from "./helpers.jsx";
 
 export default function App() {
   const [allDays,    setAllDays]    = useState({});
+  const daysRef = useRef(allDays);
+  daysRef.current = allDays;
+  const [foodUndo, setFoodUndo] = useState(null);
   const [selDay,     setSelDay]     = useState(todayKey());
   const [goals,      setGoals]      = useState({...DEFAULT_GOALS});
   const [activeTab,  setActiveTab]  = useState("chat");
@@ -171,13 +175,25 @@ export default function App() {
 
   const entries = allDays[selDay]||[];
 
-  const mutEntries = upd => setAllDays(prev=>{
-    const cur  = prev[selDay]||[];
-    const next = typeof upd==="function"?upd(cur):upd;
-    const out  = {...prev,[selDay]:next};
+  const mutEntries = (upd, day = selDay) => {
+    const cur = daysRef.current[day] || [];
+    const next = typeof upd === "function" ? upd(cur) : upd;
+    if (JSON.stringify(cur) === JSON.stringify(next)) return;
+    setFoodUndo({day, before:cur, after:next});
+    const out = {...daysRef.current, [day]:next};
+    daysRef.current = out;
     saveAll(out);
-    return out;
-  });
+    setAllDays(out);
+  };
+  const undoFood = () => {
+    if (!foodUndo) return;
+    const {day,before,after} = foodUndo;
+    const out = {...daysRef.current, [day]:undoFoodChange(daysRef.current[day] || [],before,after)};
+    daysRef.current = out;
+    saveAll(out);
+    setAllDays(out);
+    setFoodUndo(null);
+  };
 
   const totals = entries.reduce(
     (a,e)=>({calories:a.calories+e.calories,protein:a.protein+e.protein,carbs:a.carbs+e.carbs,fat:a.fat+e.fat}),
@@ -292,16 +308,12 @@ export default function App() {
       const {message="",actions=[],mode="general",workoutStatus="none",standout:isStandout=false} = result;
 
       const curWkNow = workouts[selDay]||[];
-      const {newGoals,newEntries,newWorkouts} = applyActions(actions,goals,curEntries,curWkNow);
+      const {newGoals,newEntries,newWorkouts} = applyActions(actions,goals,daysRef.current[selDay] || [],curWkNow);
       if (JSON.stringify(newGoals)!==JSON.stringify(goals)) {
         setGoals(newGoals);
         saveGoals(newGoals);
       }
-      setAllDays(prev=>{
-        const out={...prev,[selDay]:newEntries};
-        saveAll(out);
-        return out;
-      });
+      mutEntries(newEntries, selDay);
       setWorkouts(prev=>{
         const out={...prev,[selDay]:newWorkouts};
         saveWorkouts(out);
@@ -588,10 +600,10 @@ export default function App() {
       setScanLoading(false);
     }
   };
-  const logScannedItem = (entry) => {
+  const logScannedItem = (entry, base) => {
     if (scanConfirm?.code) {
       setBarcodes(prev=>{
-        const out = {...prev, [scanConfirm.code]:entry};
+        const out = {...prev, [scanConfirm.code]:base};
         saveBarcodes(out);
         return out;
       });
@@ -668,7 +680,7 @@ export default function App() {
     reader.onload = (ev) => {
       try {
         const data = JSON.parse(ev.target.result);
-        if (data.days)     { setAllDays(data.days);   saveAll(data.days); }
+        if (data.days)     { daysRef.current = data.days; setFoodUndo(null); setAllDays(data.days); saveAll(data.days); }
         if (data.goals)    { const g={...DEFAULT_GOALS,...data.goals}; setGoals(g); saveGoals(g); }
         if (data.meals)    { setMeals(data.meals);     saveMeals(data.meals); }
         if (data.workouts) { setWorkouts(data.workouts); saveWorkouts(data.workouts); }
@@ -1698,6 +1710,11 @@ export default function App() {
           onClose={()=>{ setShowWelcome(false); try{ _set("nl4_seen_version", APP_VERSION); }catch{} }}/>
       )}
       {celebrate && <Confetti big={celebrate.big}/>}
+      {foodUndo && <div role="status" style={{position:"fixed",top:12,left:"50%",transform:"translateX(-50%)",zIndex:560,display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:12,background:T.surface,border:`1px solid ${T.accent}`,color:T.text,width:"max-content",maxWidth:"90vw",fontSize:14,boxShadow:"0 4px 20px #0005"}}>
+        <span>Food log updated · {fmtDate(foodUndo.day)}</span>
+        <button onClick={undoFood} style={{background:T.accent,color:T.bg,border:0,borderRadius:8,padding:"10px",fontSize:14,cursor:"pointer"}}>Undo</button>
+        <button aria-label="Dismiss undo" onClick={()=>setFoodUndo(null)} style={{background:"none",border:0,color:T.text,padding:8,cursor:"pointer"}}>×</button>
+      </div>}
       {celebrate && <Toast text={celebrate.text}/>}
 
       <HistoryDrawer open={showHist} allDays={allDays} selectedDay={selDay}
