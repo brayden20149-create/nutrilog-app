@@ -2,9 +2,12 @@ import { barcodeNutrition, scaleNutrition, MACROS } from "./nutrition.js";
 import { useState, useEffect, useRef } from "react";
 
 
-export const APP_VERSION = "1.6.0";
+export const APP_VERSION = "1.6.1";
 
 export const CHANGELOG = [
+  { version:"1.6.1", date:"Sep 11, 2026", notes:[
+    { text:"Undo now appears near the bottom with larger buttons, clear of the iPhone home indicator", action:"log" },
+  ]},
   { version:"1.6.0", date:"Sep 9, 2026", notes:[
     { text:"Log scanned foods in fractional servings or grams with calculated totals", action:"scan" },
     { text:"Missing barcode nutrition stays blank so you can fill it from the label", action:"scan" },

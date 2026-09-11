@@ -1710,10 +1710,10 @@ export default function App() {
           onClose={()=>{ setShowWelcome(false); try{ _set("nl4_seen_version", APP_VERSION); }catch{} }}/>
       )}
       {celebrate && <Confetti big={celebrate.big}/>}
-      {foodUndo && <div role="status" style={{position:"fixed",top:12,left:"50%",transform:"translateX(-50%)",zIndex:560,display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:12,background:T.surface,border:`1px solid ${T.accent}`,color:T.text,width:"max-content",maxWidth:"90vw",fontSize:14,boxShadow:"0 4px 20px #0005"}}>
-        <span>Food log updated · {fmtDate(foodUndo.day)}</span>
-        <button onClick={undoFood} style={{background:T.accent,color:T.bg,border:0,borderRadius:8,padding:"10px",fontSize:14,cursor:"pointer"}}>Undo</button>
-        <button aria-label="Dismiss undo" onClick={()=>setFoodUndo(null)} style={{background:"none",border:0,color:T.text,padding:8,cursor:"pointer"}}>×</button>
+      {foodUndo && <div role="status" style={{position:"absolute",bottom:"calc(env(safe-area-inset-bottom, 0px) + 96px)",left:"50%",transform:"translateX(-50%)",zIndex:560,display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:12,background:T.surface,border:`1px solid ${T.accent}`,color:T.text,boxSizing:"border-box",width:"calc(100% - 28px)",maxWidth:420,fontSize:14,boxShadow:"0 4px 20px #0005"}}>
+        <span style={{flex:1,minWidth:0}}>Food log updated · {fmtDate(foodUndo.day)}</span>
+        <button onClick={undoFood} style={{background:T.accent,color:T.bg,border:0,borderRadius:8,padding:"10px",minHeight:44,minWidth:64,flexShrink:0,touchAction:"manipulation",fontSize:14,cursor:"pointer"}}>Undo</button>
+        <button aria-label="Dismiss undo" onClick={()=>setFoodUndo(null)} style={{background:"none",border:0,color:T.text,padding:8,minHeight:44,minWidth:44,flexShrink:0,touchAction:"manipulation",cursor:"pointer"}}>×</button>
       </div>}
       {celebrate && <Toast text={celebrate.text}/>}
 
