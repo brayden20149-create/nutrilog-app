@@ -2,9 +2,16 @@ import { barcodeNutrition, scaleNutrition, MACROS } from "./nutrition.js";
 import { useState, useEffect, useRef } from "react";
 
 
-export const APP_VERSION = "1.5.0";
+export const APP_VERSION = "1.6.0";
 
 export const CHANGELOG = [
+  { version:"1.6.0", date:"Sep 9, 2026", notes:[
+    { text:"Log scanned foods in fractional servings or grams with calculated totals", action:"scan" },
+    { text:"Missing barcode nutrition stays blank so you can fill it from the label", action:"scan" },
+    { text:"Saved barcodes remember one base serving, keeping repeat scans accurate", action:"scan" },
+    { text:"Older saved barcodes need label nutrition entered once; existing food logs stay unchanged" },
+    { text:"Undo your latest food-log change, including additions, edits, deletions, and clears, during this session", action:"log" },
+  ]},
   { version:"1.5.0", date:"Jun 2026", notes:[
     { text:"Food logging can search the web for real restaurant nutrition data", action:"settings" },
     { text:"Toggle web search on/off to control extra API usage", action:"settings" },
