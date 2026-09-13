@@ -1,3 +1,4 @@
+import { foodMemory, matchingFoods, isRepeatRequest, copyFood } from "./foodMemory.js";
 import { undoFoodChange } from "./nutrition.js";
 import { useState, useEffect, useRef } from "react";
 import { APP_VERSION, T, applyTheme, loadTheme, saveTheme, DEFAULT_SETTINGS, loadSettings, saveSettings, toDisplayWeight, fromDisplayWeight, weightUnit, toDisplayWater, waterUnit, DEFAULT_GOALS, todayKey, isToday, fmtDate, fmtFull, _get, _set, loadAll, saveAll, loadGoals, saveGoals, loadMeals, saveMeals, loadPrograms, savePrograms, cleanWorkoutDay, loadWorkouts, saveWorkouts, loadStandout, saveStandout, loadWeights, saveWeights, loadWater, saveWater, WATER_STEP, loadBarcodes, saveBarcodes, HAPTICS_ON, haptic, setHapticsOn, DEFAULT_PROFILE, loadProfile, saveProfile, weekStart, addDays, weekDays, dowShort, dayNum, dayHitsGoal, sumDay, analyzeWorkoutDay, normName, computeStreak, mealPerContainer, InfoDot, Ring, Bar, EntryRow, Bubble, HistoryDrawer, MealEditor, ProfileTab, ProgramsTab, Confetti, Toast, BarcodeScanner, ScanConfirm, SettingsModal, WelcomeModal, lookupBarcode, computeHabits, callAssistant } from "./helpers.jsx";
@@ -7,6 +8,7 @@ export default function App() {
   const daysRef = useRef(allDays);
   daysRef.current = allDays;
   const [foodUndo, setFoodUndo] = useState(null);
+  const [repeatFood, setRepeatFood] = useState(null);
   const [selDay,     setSelDay]     = useState(todayKey());
   const [goals,      setGoals]      = useState({...DEFAULT_GOALS});
   const [activeTab,  setActiveTab]  = useState("chat");
@@ -260,9 +262,17 @@ export default function App() {
     reader.readAsDataURL(file);
   };
 
-  const handleSend = async () => {
+  const handleSend = async (skipRepeat = false) => {
     const text=input.trim();
     if ((!text && !pendingImage)||loading) return;
+    const memory = foodMemory(daysRef.current, barcodes, meals.map(m=>({name:m.name,perContainer:mealPerContainer(m)})));
+    const matches = matchingFoods(text, memory);
+    if (skipRepeat !== true && !pendingImage && isRepeatRequest(text) && matches.length) {
+      inputRef.current?.blur();
+      setRepeatFood({text,day:selDay,matches});
+      return;
+    }
+    setRepeatFood(null);
     inputRef.current?.blur();
     const img = pendingImage;
     setInput("");
@@ -287,7 +297,8 @@ export default function App() {
     const habits = computeHabits(allDays, workouts);
     const habitsBlock = habits.loggedDayCount>0 ? ` | Habits:${JSON.stringify({avgMacros:habits.avg,frequentFoods:habits.topFoods,daysLogged:habits.loggedDayCount})}` : "";
     const nameBlock = profile.name ? ` | UserName:${profile.name}` : "";
-    const ctx=`\n\n[STATE] Date:${selDay}${isToday(selDay)?" (today)":""} | Goals:${JSON.stringify(goals)} | Log(${curEntries.length} items):${JSON.stringify(curEntries.map(e=>({name:e.name,calories:e.calories,protein:e.protein,carbs:e.carbs,fat:e.fat})))} | Totals:${JSON.stringify(curTotals)} | Remaining: cal ${goals.calories-curTotals.calories}, protein ${goals.protein-curTotals.protein}g, carbs ${goals.carbs-curTotals.carbs}g, fat ${goals.fat-curTotals.fat}g | Workouts today:${JSON.stringify(curWk.map(w=>({name:w.name,detail:w.detail})))} | MealLibrary:${JSON.stringify(mealLib)}${profBlock}${nameBlock}${habitsBlock}`;
+    const memoryBlock = ` | SavedFoodMatches:${JSON.stringify(matches.map(r=>({...r.entry,portion:r.portion,origin:r.origin})))}`;
+    const ctx=`\n\n[STATE] Date:${selDay}${isToday(selDay)?" (today)":""} | Goals:${JSON.stringify(goals)} | Log(${curEntries.length} items):${JSON.stringify(curEntries.map(e=>({name:e.name,calories:e.calories,protein:e.protein,carbs:e.carbs,fat:e.fat})))} | Totals:${JSON.stringify(curTotals)} | Remaining: cal ${goals.calories-curTotals.calories}, protein ${goals.protein-curTotals.protein}g, carbs ${goals.carbs-curTotals.carbs}g, fat ${goals.fat-curTotals.fat}g | Workouts today:${JSON.stringify(curWk.map(w=>({name:w.name,detail:w.detail})))} | MealLibrary:${JSON.stringify(mealLib)}${profBlock}${nameBlock}${habitsBlock}${memoryBlock}`;
 
     const apiMsgs = chatMsgs.slice(-8).map(m=>({role:m.role,content:m.content}));
     const promptText = (text || "Estimate the macros of the food in this photo and log it.") + ctx;
@@ -1635,6 +1646,26 @@ export default function App() {
           onSave={handleProfileSave} onApplyGoals={handleApplyGoals}/>
       )}
 
+      {repeatFood && <div style={{position:"absolute",inset:0,zIndex:550,background:T.overlay,display:"flex",alignItems:"flex-end",padding:"12px 12px max(env(safe-area-inset-bottom),12px)"}}>
+        <div role="dialog" aria-modal="true" aria-label="Choose saved food portion" style={{background:T.surface,color:T.text,borderRadius:16,padding:16,width:"100%",maxHeight:"75%",overflowY:"auto"}}>
+          <h2 style={{fontSize:20,marginBottom:8}}>Use a saved portion</h2>
+          <p style={{fontSize:14,marginBottom:12}}>For “{repeatFood.text}”, choose the food and portion you mean. These keep the recorded macros exactly; past estimates are not verified labels.</p>
+          {repeatFood.matches.map((r,i)=><button key={i} onClick={()=>{
+            const entry=copyFood(r), now=Date.now();
+            mutEntries(prev=>[...prev,{...entry,id:now+Math.random(),loggedAt:now}],repeatFood.day);
+            setChatMsgs(prev=>[...prev,{role:"user",content:repeatFood.text,actions:[]},{role:"assistant",mode:"food",content:`Logged ${entry.name} — ${r.portion}. ${entry.calories} cal | ${entry.protein}g protein | ${entry.carbs}g carbs | ${entry.fat}g fat. Reused ${r.origin.toLowerCase()}.`,actions:[]}]);
+            setInput(""); setRepeatFood(null);
+          }} style={{display:"block",textAlign:"left",width:"100%",minHeight:44,marginBottom:10,padding:12,borderRadius:12,border:`1px solid ${T.border}`,background:T.bg,color:T.text,cursor:"pointer"}}>
+            <strong style={{fontSize:16}}>{r.entry.name}</strong>
+            <div style={{fontSize:14,marginTop:5}}>{r.origin} · {r.portion}</div>
+            <div style={{fontSize:14,marginTop:5}}>{r.entry.calories} cal · {r.entry.protein}P · {r.entry.carbs}C · {r.entry.fat}F</div>
+            <div style={{fontSize:14,color:T.accent,marginTop:6}}>Log this exact portion</div>
+          </button>)}
+          <button onClick={()=>{setRepeatFood(null);inputRef.current?.focus();}} style={{minHeight:44,width:"100%",marginBottom:8,background:T.bg,color:T.text,border:`1px solid ${T.border}`,borderRadius:10}}>Change food or amount</button>
+          <button onClick={()=>handleSend(true)} style={{minHeight:44,width:"100%",background:T.bg,color:T.text,border:`1px solid ${T.border}`,borderRadius:10}}>Ask AI about this amount instead</button>
+        </div>
+      </div>}
+
       {scanning && (
         <BarcodeScanner onDetected={onBarcodeDetected} onClose={()=>setScanning(false)}/>
       )}
@@ -1710,7 +1741,7 @@ export default function App() {
           onClose={()=>{ setShowWelcome(false); try{ _set("nl4_seen_version", APP_VERSION); }catch{} }}/>
       )}
       {celebrate && <Confetti big={celebrate.big}/>}
-      {foodUndo && <div role="status" style={{position:"absolute",bottom:"calc(env(safe-area-inset-bottom, 0px) + 96px)",left:"50%",transform:"translateX(-50%)",zIndex:560,display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:12,background:T.surface,border:`1px solid ${T.accent}`,color:T.text,boxSizing:"border-box",width:"calc(100% - 28px)",maxWidth:420,fontSize:14,boxShadow:"0 4px 20px #0005"}}>
+      {foodUndo && !repeatFood && <div role="status" style={{position:"absolute",bottom:"calc(env(safe-area-inset-bottom, 0px) + 96px)",left:"50%",transform:"translateX(-50%)",zIndex:560,display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:12,background:T.surface,border:`1px solid ${T.accent}`,color:T.text,boxSizing:"border-box",width:"calc(100% - 28px)",maxWidth:420,fontSize:14,boxShadow:"0 4px 20px #0005"}}>
         <span style={{flex:1,minWidth:0}}>Food log updated · {fmtDate(foodUndo.day)}</span>
         <button onClick={undoFood} style={{background:T.accent,color:T.bg,border:0,borderRadius:8,padding:"10px",minHeight:44,minWidth:64,flexShrink:0,touchAction:"manipulation",fontSize:14,cursor:"pointer"}}>Undo</button>
         <button aria-label="Dismiss undo" onClick={()=>setFoodUndo(null)} style={{background:"none",border:0,color:T.text,padding:8,minHeight:44,minWidth:44,flexShrink:0,touchAction:"manipulation",cursor:"pointer"}}>×</button>
