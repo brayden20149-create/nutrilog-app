@@ -2,9 +2,14 @@ import { barcodeNutrition, scaleNutrition, MACROS } from "./nutrition.js";
 import { useState, useEffect, useRef } from "react";
 
 
-export const APP_VERSION = "1.7.0";
+export const APP_VERSION = "1.8.0";
 
 export const CHANGELOG = [
+  { version:"1.8.0", date:"Sep 13, 2026", notes:[
+    { text:"Scan ingredient barcodes while creating or editing a meal prep", action:"meals" },
+    { text:"Enter grams or servings used for the whole batch; per-container macros update automatically" },
+    { text:"Scanned nutrition is remembered and protected from AI auto-fill" },
+  ]},
   { version:"1.7.0", date:"Sep 13, 2026", notes:[
     { text:"Repeat food logging offers saved portions with their exact recorded macros", action:"chat" },
     { text:"Chat can reference matching barcode nutrition, saved meals, and previous food entries", action:"chat" },
@@ -1187,13 +1192,41 @@ export const HistoryDrawer = ({open,allDays,selectedDay,onSelectDay,onClose,onNa
   </>);
 };
 
-export const MealEditor = ({ meal, onSave, onDelete, onClose }) => {
+export const MealEditor = ({ meal, onSave, onDelete, onClose, barcodes = {}, onRememberBarcode }) => {
   const isNew = meal === "new";
   const [name, setName] = useState(isNew ? "" : meal.name);
   const [containers, setContainers] = useState(isNew ? 1 : meal.containers || 1);
   const [ings, setIngs] = useState(
     isNew ? [{ name:"", calories:"", protein:"", carbs:"", fat:"" }] : [...meal.ingredients]
   );
+
+  const [ingredientScan, setIngredientScan] = useState(false);
+  const [ingredientLookup, setIngredientLookup] = useState(false);
+  const [ingredientConfirm, setIngredientConfirm] = useState(null);
+  const lookupToken = useRef(0);
+  useEffect(()=>()=>{ lookupToken.current++; },[]);
+  const detectIngredient = async code => {
+    setIngredientScan(false);
+    const token = ++lookupToken.current;
+    if (barcodes[code]) {
+      setIngredientConfirm({code,data:barcodes[code]});
+      return;
+    }
+    setIngredientLookup(true);
+    try {
+      const data = await lookupBarcode(code);
+      if (token === lookupToken.current) setIngredientConfirm({code,data});
+    } catch {
+      if (token === lookupToken.current) setIngredientConfirm({code,data:null});
+    } finally {
+      if (token === lookupToken.current) setIngredientLookup(false);
+    }
+  };
+  const addScannedIngredient = (entry, base) => {
+    setIngs(prev=>[...prev.filter(row=>row.name.trim() || MACROS.some(k=>row[k] !== "" && row[k] != null)), {...entry}]);
+    onRememberBarcode?.(ingredientConfirm.code, base);
+    setIngredientConfirm(null);
+  };
 
   const setIng = (i, k, v) => setIngs(prev => prev.map((row, idx) => idx === i ? { ...row, [k]: v } : row));
   const addIng = () => setIngs(prev => [...prev, { name:"", calories:"", protein:"", carbs:"", fat:"" }]);
@@ -1203,8 +1236,8 @@ export const MealEditor = ({ meal, onSave, onDelete, onClose }) => {
   const [fillErr, setFillErr] = useState("");
 
   const autoFill = async () => {
-    const named = ings.map((ing,idx)=>({idx, name:ing.name.trim()})).filter(x=>x.name);
-    if (named.length===0) { setFillErr("Type at least one ingredient name first."); return; }
+    const named = ings.map((ing,idx)=>({idx, name:ing.name.trim(), barcode:ing.barcode})).filter(x=>x.name && !x.barcode);
+    if (named.length===0) { setFillErr("Add an unscanned ingredient name first. Scanned nutrition is already filled in."); return; }
     setFilling(true); setFillErr("");
     try {
       const results = await estimateIngredients(named.map(x=>x.name));
@@ -1212,7 +1245,7 @@ export const MealEditor = ({ meal, onSave, onDelete, onClose }) => {
         const next = [...prev];
         named.forEach((x, j) => {
           const r = results[j];
-          if (r) next[x.idx] = {
+          if (r && next[x.idx] && !next[x.idx].barcode && next[x.idx].name.trim() === x.name) next[x.idx] = {
             name: next[x.idx].name,
             calories: Math.round(+r.calories||0),
             protein:  Math.round(+r.protein||0),
@@ -1244,7 +1277,7 @@ export const MealEditor = ({ meal, onSave, onDelete, onClose }) => {
   const handleSave = () => {
     const cleanIngs = ings
       .filter(i=>i.name.trim())
-      .map(i=>({ name:i.name.trim(), calories:+i.calories||0, protein:+i.protein||0, carbs:+i.carbs||0, fat:+i.fat||0 }));
+      .map(i=>({ ...i, name:i.name.trim(), calories:+i.calories||0, protein:+i.protein||0, carbs:+i.carbs||0, fat:+i.fat||0 }));
     onSave({
       id: isNew ? Date.now()+Math.random() : meal.id,
       name: name.trim(),
@@ -1260,7 +1293,7 @@ export const MealEditor = ({ meal, onSave, onDelete, onClose }) => {
   };
   const numStyle = { ...inputStyle, fontSize:15, textAlign:"center", padding:"8px 4px" };
 
-  return (
+  return (<>
     <div style={{position:"fixed",inset:0,background:T.overlay,zIndex:300,
       display:"flex",alignItems:"flex-end"}} onClick={onClose}>
       <div onClick={e=>e.stopPropagation()}
@@ -1303,8 +1336,12 @@ export const MealEditor = ({ meal, onSave, onDelete, onClose }) => {
 
         {/* Ingredients */}
         <div style={{fontSize:12,color:T.muted,marginBottom:8}}>
-          List your ingredients with amounts (e.g. "2 lbs chicken breast"). Tap Auto-fill and the AI adds the macros — or type them yourself.
+          Scan packaged ingredients and enter the amount used for the whole batch. You can also type ingredients and use Auto-fill for unscanned items.
         </div>
+        <button onClick={()=>setIngredientScan(true)} disabled={filling}
+          style={{width:"100%",minHeight:48,padding:12,marginBottom:12,borderRadius:10,border:`1px solid ${T.accent}`,background:T.accent,color:T.bg,fontSize:16,fontWeight:700,cursor:"pointer"}}>
+          Scan ingredient barcode
+        </button>
         {ings.map((ing,i)=>(
           <div key={i} style={{background:T.card,borderRadius:12,padding:"10px",
             marginBottom:8,border:`1px solid ${T.border}`}}>
@@ -1321,7 +1358,7 @@ export const MealEditor = ({ meal, onSave, onDelete, onClose }) => {
               {[["calories","cal",T.cal],["protein","P",T.protein],["carbs","C",T.carbs],["fat","F",T.fat]].map(([k,lbl,col])=>(
                 <div key={k} style={{flex:1}}>
                   <div style={{fontSize:9,color:col,textAlign:"center",marginBottom:3}}>{lbl}</div>
-                  <input type="number" inputMode="numeric" value={ing[k]}
+                  <input type="number" inputMode="decimal" step="any" value={ing[k]}
                     onChange={e=>setIng(i,k,e.target.value)} placeholder="0" style={numStyle}/>
                 </div>
               ))}
@@ -1395,7 +1432,16 @@ export const MealEditor = ({ meal, onSave, onDelete, onClose }) => {
         </div>
       </div>
     </div>
-  );
+    {ingredientScan && <BarcodeScanner onDetected={detectIngredient} onClose={()=>setIngredientScan(false)}/>}
+    {ingredientLookup && <div role="status" style={{position:"fixed",inset:0,zIndex:545,background:T.overlay,display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{background:T.surface,color:T.text,padding:24,borderRadius:16}}>
+        <p>Looking up ingredient…</p>
+        <button onClick={()=>{lookupToken.current++;setIngredientLookup(false);}} style={{minHeight:44,marginTop:12,padding:12}}>Cancel</button>
+      </div>
+    </div>}
+    {ingredientConfirm && <ScanConfirm initial={ingredientConfirm.data} code={ingredientConfirm.code} notFound={!ingredientConfirm.data}
+      onLog={addScannedIngredient} onClose={()=>setIngredientConfirm(null)} destination="prep"/>}
+  </>);
 };
 
 export const PF_FIELD = {
@@ -1675,6 +1721,7 @@ export const BarcodeScanner = ({ onDetected, onClose }) => {
 
   useEffect(()=>{
     let cancelled = false;
+    let delivered = false;
     let reader = null;
     (async ()=>{
       try {
@@ -1685,9 +1732,9 @@ export const BarcodeScanner = ({ onDetected, onClose }) => {
         controlsRef.current = await reader.decodeFromVideoDevice(
           undefined, videoRef.current,
           (result, e) => {
-            if (result && !cancelled) {
+            if (result && !cancelled && !delivered) {
               const text = result.getText();
-              if (text) { onDetected(text); }
+              if (text) { delivered = true; onDetected(text); }
             }
           }
         );
@@ -1734,7 +1781,8 @@ export const BarcodeScanner = ({ onDetected, onClose }) => {
   );
 };
 
-export const ScanConfirm = ({ initial, code, notFound, onLog, onClose }) => {
+export const ScanConfirm = ({ initial, code, notFound, onLog, onClose, destination = "log" }) => {
+  const isPrep = destination === "prep";
   const [d, setD] = useState(() => ({...initial, name:initial?.name || "", basisGrams:initial?.basisGrams || "",
     ...Object.fromEntries(MACROS.map(k => [k, initial?.nutritionVersion === 2 ? (initial?.[k] ?? "") : ""]))}));
   const [amount, setAmount] = useState("1");
@@ -1752,19 +1800,21 @@ export const ScanConfirm = ({ initial, code, notFound, onLog, onClose }) => {
     onLog({...total,name:`${base.name} (${portion})`,quantity:Number(amount),quantityUnit:unit,barcode:code}, base);
   };
   return <div onClick={onClose} style={{position:"fixed",inset:0,background:T.overlay,zIndex:545,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-    <div role="dialog" aria-modal="true" aria-label="Scanned food" onClick={e=>e.stopPropagation()} style={{boxSizing:"border-box",background:T.surface,color:T.text,border:`1px solid ${T.border}`,borderRadius:18,padding:20,maxWidth:380,width:"100%",maxHeight:"86vh",overflowY:"auto"}}>
-      <h2 style={{fontSize:20,margin:"0 0 12px"}}>Scanned food</h2>
+    <div role="dialog" aria-modal="true" aria-label={isPrep ? "Scanned ingredient" : "Scanned food"} onClick={e=>e.stopPropagation()} style={{boxSizing:"border-box",background:T.surface,color:T.text,border:`1px solid ${T.border}`,borderRadius:18,padding:20,maxWidth:380,width:"100%",maxHeight:"86vh",overflowY:"auto"}}>
+      <h2 style={{fontSize:20,margin:"0 0 12px"}}>{isPrep ? "Scanned ingredient" : "Scanned food"}</h2>
       <p style={{fontSize:14,color:T.muted}}>Nutrition for one base serving{initial?.basis ? ` (${initial.basis})` : ""}. Check these values against the label.</p>
       {initial && initial.nutritionVersion !== 2 && <p role="status" style={{fontSize:14,color:T.cal}}>Previously saved barcode: re-enter one serving from the label. Older saved values may include multiple servings.</p>}
       {MACROS.some(k=>d[k]==="") && <p role="status" style={{fontSize:14,color:T.cal}}>Some nutrition values are missing. Enter them from the label, including any zeros.</p>}
       <label style={label}>Product name<input style={field} value={d.name} onChange={e=>set("name",e.target.value)}/></label>
       <label style={label}>Grams in one base serving (optional)<input style={field} type="number" min="0.001" step="any" inputMode="decimal" value={d.basisGrams} onChange={e=>set("basisGrams",e.target.value)}/></label>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>{MACROS.map(k=><label key={k} style={label}>{k === "calories" ? "Calories (kcal)" : `${k[0].toUpperCase()+k.slice(1)} (g)`}<input style={field} type="number" min="0" step="any" inputMode="decimal" value={d[k]} onChange={e=>set(k,e.target.value)}/></label>)}</div>
-      <label style={label}>Amount eaten<input style={field} type="number" min="0.001" step="any" inputMode="decimal" value={amount} onChange={e=>setAmount(e.target.value)}/></label>
+      {isPrep && <p style={{fontSize:14,marginBottom:12}}>Enter the total amount used in the whole batch. For pasta and rice, use the dry weight when the label is for the dry product.</p>}
+      {notFound && <p style={{fontSize:14,color:T.cal,marginBottom:12}}>Barcode not found. Enter the label values once to remember this ingredient.</p>}
+      <label style={label}>{isPrep ? "Amount used in whole batch" : "Amount eaten"}<input style={field} type="number" min="0.001" step="any" inputMode="decimal" value={amount} onChange={e=>setAmount(e.target.value)}/></label>
       <label style={label}>Measure in<select style={field} value={unit} onChange={e=>setUnit(e.target.value)}><option value="servings">Base servings</option><option value="g">Grams</option></select></label>
       {unit === "g" && !(Number(d.basisGrams)>0) && <p style={{fontSize:14,color:T.cal}}>Enter the grams in one base serving to calculate by weight.</p>}
       <div aria-live="polite" style={{padding:12,background:T.bg,borderRadius:10,marginBottom:16,fontSize:14}}>{total ? `${Math.round(total.calories)} kcal · ${total.protein.toFixed(1)} g protein · ${total.carbs.toFixed(1)} g carbs · ${total.fat.toFixed(1)} g fat` : "Complete the nutrition and amount to see your total."}</div>
-      <div style={{display:"flex",gap:10}}><button onClick={onClose} style={{...field,cursor:"pointer"}}>Cancel</button><button disabled={!valid} onClick={submit} style={{...field,background:T.accent,color:T.bg,opacity:valid?1:0.4,cursor:"pointer"}}>Log food</button></div>
+      <div style={{display:"flex",gap:10}}><button onClick={onClose} style={{...field,cursor:"pointer"}}>Cancel</button><button disabled={!valid} onClick={submit} style={{...field,background:T.accent,color:T.bg,opacity:valid?1:0.4,cursor:"pointer"}}>{isPrep ? "Add to prep" : "Log food"}</button></div>
     </div>
   </div>;
 };

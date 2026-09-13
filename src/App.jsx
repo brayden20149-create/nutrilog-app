@@ -582,6 +582,7 @@ export default function App() {
     switch (action) {
       case "chat":    setActiveTab("chat"); break;
       case "log":     setActiveTab("log"); break;
+      case "meals":   setActiveTab("meals"); break;
       case "train":   setActiveTab("chat"); break;
       case "workouts":setActiveTab("workouts"); break;
       case "week":    setActiveTab("week"); break;
@@ -1741,7 +1742,7 @@ export default function App() {
           onClose={()=>{ setShowWelcome(false); try{ _set("nl4_seen_version", APP_VERSION); }catch{} }}/>
       )}
       {celebrate && <Confetti big={celebrate.big}/>}
-      {foodUndo && !repeatFood && <div role="status" style={{position:"absolute",bottom:"calc(env(safe-area-inset-bottom, 0px) + 96px)",left:"50%",transform:"translateX(-50%)",zIndex:560,display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:12,background:T.surface,border:`1px solid ${T.accent}`,color:T.text,boxSizing:"border-box",width:"calc(100% - 28px)",maxWidth:420,fontSize:14,boxShadow:"0 4px 20px #0005"}}>
+      {foodUndo && !repeatFood && !editMeal && <div role="status" style={{position:"absolute",bottom:"calc(env(safe-area-inset-bottom, 0px) + 96px)",left:"50%",transform:"translateX(-50%)",zIndex:560,display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:12,background:T.surface,border:`1px solid ${T.accent}`,color:T.text,boxSizing:"border-box",width:"calc(100% - 28px)",maxWidth:420,fontSize:14,boxShadow:"0 4px 20px #0005"}}>
         <span style={{flex:1,minWidth:0}}>Food log updated · {fmtDate(foodUndo.day)}</span>
         <button onClick={undoFood} style={{background:T.accent,color:T.bg,border:0,borderRadius:8,padding:"10px",minHeight:44,minWidth:64,flexShrink:0,touchAction:"manipulation",fontSize:14,cursor:"pointer"}}>Undo</button>
         <button aria-label="Dismiss undo" onClick={()=>setFoodUndo(null)} style={{background:"none",border:0,color:T.text,padding:8,minHeight:44,minWidth:44,flexShrink:0,touchAction:"manipulation",cursor:"pointer"}}>×</button>
@@ -1757,6 +1758,7 @@ export default function App() {
         onChange={e=>{ handleImportFile(e.target.files?.[0]); e.target.value=""; }}/>
       {editMeal && (
         <MealEditor meal={editMeal} onSave={saveMeal} onDelete={deleteMeal}
+          barcodes={barcodes} onRememberBarcode={(code,base)=>setBarcodes(prev=>{const out={...prev,[code]:base};saveBarcodes(out);return out;})}
           onClose={()=>setEditMeal(null)}/>
       )}
     </div>
