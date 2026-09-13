@@ -1,7 +1,7 @@
 import { foodMemory, matchingFoods, isRepeatRequest, copyFood } from "./foodMemory.js";
 import { undoFoodChange } from "./nutrition.js";
 import { useState, useEffect, useRef } from "react";
-import { APP_VERSION, DietTotals, T, applyTheme, loadTheme, saveTheme, DEFAULT_SETTINGS, loadSettings, saveSettings, toDisplayWeight, fromDisplayWeight, weightUnit, toDisplayWater, waterUnit, DEFAULT_GOALS, todayKey, isToday, fmtDate, fmtFull, _get, _set, loadAll, saveAll, loadGoals, saveGoals, loadMeals, saveMeals, loadPrograms, savePrograms, cleanWorkoutDay, loadWorkouts, saveWorkouts, loadStandout, saveStandout, loadWeights, saveWeights, loadWater, saveWater, WATER_STEP, loadBarcodes, saveBarcodes, HAPTICS_ON, haptic, setHapticsOn, DEFAULT_PROFILE, loadProfile, saveProfile, weekStart, addDays, weekDays, dowShort, dayNum, dayHitsGoal, sumDay, analyzeWorkoutDay, normName, computeStreak, mealPerContainer, InfoDot, Ring, Bar, EntryRow, Bubble, HistoryDrawer, MealEditor, ProfileTab, ProgramsTab, Confetti, Toast, BarcodeScanner, ScanConfirm, SettingsModal, WelcomeModal, lookupBarcode, computeHabits, callAssistant } from "./helpers.jsx";
+import { APP_VERSION, DietProjection, T, applyTheme, loadTheme, saveTheme, DEFAULT_SETTINGS, loadSettings, saveSettings, toDisplayWeight, fromDisplayWeight, weightUnit, toDisplayWater, waterUnit, DEFAULT_GOALS, todayKey, isToday, fmtDate, fmtFull, _get, _set, loadAll, saveAll, loadGoals, saveGoals, loadMeals, saveMeals, loadPrograms, savePrograms, cleanWorkoutDay, loadWorkouts, saveWorkouts, loadStandout, saveStandout, loadWeights, saveWeights, loadWater, saveWater, WATER_STEP, loadBarcodes, saveBarcodes, HAPTICS_ON, haptic, setHapticsOn, DEFAULT_PROFILE, loadProfile, saveProfile, weekStart, addDays, weekDays, dowShort, dayNum, dayHitsGoal, sumDay, analyzeWorkoutDay, normName, computeStreak, mealPerContainer, InfoDot, Ring, Bar, EntryRow, Bubble, HistoryDrawer, MealEditor, ProfileTab, ProgramsTab, Confetti, Toast, BarcodeScanner, ScanConfirm, SettingsModal, WelcomeModal, lookupBarcode, computeHabits, callAssistant } from "./helpers.jsx";
 
 export default function App() {
   const [allDays,    setAllDays]    = useState({});
@@ -1065,7 +1065,7 @@ export default function App() {
             </div>
           </div>
 
-          <DietTotals entries={entries}/>
+          <DietProjection days={allDays} goals={goals} today={todayKey()}/>
           {/* Entries */}
           {entries.length>0 ? (<>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,marginTop:6}}>

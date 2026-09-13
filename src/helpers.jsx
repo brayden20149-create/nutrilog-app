@@ -1,10 +1,15 @@
+import { dietProjection } from "./dietProjection.js";
 import { barcodeNutrition, scaleNutrition, MACROS, DIET_FIELDS, dietValues, dietSummary, dietPerContainer } from "./nutrition.js";
 import { useState, useEffect, useRef } from "react";
 
 
-export const APP_VERSION = "1.9.0";
+export const APP_VERSION = "1.9.1";
 
 export const CHANGELOG = [
+  { version:"1.9.1", date:"Sep 13, 2026", notes:[
+    { text:"A simple diet projection replaces the daily missing-nutrient panel", action:"log" },
+    { text:"See your recent pattern compared with your goals and one practical next step" },
+  ]},
   { version:"1.9.0", date:"Sep 13, 2026", notes:[
     { text:"Track fiber, sodium, and fruit and vegetable cups alongside macros", action:"log" },
     { text:"Barcode scans read fiber and sodium when available; unknown values stay blank" },
@@ -766,6 +771,17 @@ export const DietFields = ({value,onChange}) => <details style={{margin:"10px 0"
   <p style={{color:T.muted,marginBottom:8}}>Leave unknown values blank. Enter 0 only when known. Fruit and vegetables use actual cups, not an inferred serving count.</p>
   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>{DIET_FIELDS.map(([k,label])=><label key={k}>{label}<input type="number" min="0" step="any" inputMode="decimal" placeholder="Unknown" value={value[k] ?? ""} onChange={e=>onChange(k,e.target.value)} style={{display:"block",boxSizing:"border-box",width:"100%",minHeight:44,fontSize:16,padding:8,borderRadius:8,border:`1px solid ${T.border}`,background:T.bg,color:T.text}}/></label>)}</div>
 </details>;
+export const DietProjection = ({days,goals,today}) => {
+  const p=dietProjection(days,goals,today);
+  return <section style={{background:T.card,padding:16,borderRadius:12,marginBottom:12}}>
+    <h3 style={{fontSize:18,marginBottom:8}}>Diet projection</h3>
+    <strong style={{display:"block",fontSize:16,marginBottom:8,color:T.accent}}>{p.title}</strong>
+    <p style={{fontSize:15,lineHeight:1.5,marginBottom:10}}>{p.explanation}</p>
+    <p style={{fontSize:15,lineHeight:1.5}}><strong>Next step: </strong>{p.change}</p>
+    {p.avg && <p style={{fontSize:12,lineHeight:1.4,color:T.muted,marginTop:10}}>Based on {p.days} logged days from the last two weeks, excluding today. Incomplete logs can skew this. This projects logged intake, not weight or overall health.</p>}
+  </section>;
+};
+
 export const DietTotals = ({entries}) => {
   const summary=dietSummary(entries);
   return <div style={{background:T.card,padding:14,borderRadius:12,marginBottom:12}}>
