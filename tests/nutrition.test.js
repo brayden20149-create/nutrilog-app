@@ -42,3 +42,15 @@ test('undo edit, removal and clear restores original entries',()=>{
   assert.deepEqual(undoFoodChange([b],[a,b],[b]),[a,b]);
   assert.deepEqual(undoFoodChange([],[a,b],[]),[a,b]);
 });
+
+test('barcode sodium converts grams to milligrams and scales with the portion',()=>{
+ const b=barcodeNutrition({serving_size:'40 g',nutriments:{'energy-kcal_serving':150,proteins_serving:4,carbohydrates_serving:28,fat_serving:2,sodium_100g:0.5,fiber_100g:10}});
+ assert.equal(b.sodium,200);assert.equal(b.fiber,4);
+ assert.equal(scaleNutrition(b,2).sodium,400);assert.equal(scaleNutrition(b,60,'g').fiber,6);
+ assert.equal(b.fruitCups,null);
+});
+test('optional unknowns stay null while genuine zeros and produce amounts scale',()=>{
+ const b={...barcodeNutrition(product),fiber:0,sodium:null,fruitCups:0.5,vegetableCups:0};
+ const scaled=scaleNutrition(b,2);
+ assert.equal(scaled.fiber,0);assert.equal(scaled.sodium,null);assert.equal(scaled.fruitCups,1);
+});

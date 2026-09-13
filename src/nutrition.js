@@ -1,5 +1,5 @@
 export const MACROS = ['calories', 'protein', 'carbs', 'fat'];
-const number = value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value)) && Number(value) >= 0 ? Number(value) : null;
+export const number = value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value)) && Number(value) >= 0 ? Number(value) : null;
 
 export function barcodeNutrition(product) {
   const n = product.nutriments || {};
@@ -16,7 +16,16 @@ export function barcodeNutrition(product) {
     }
     return [MACROS[i], v];
   }));
-  return { ...values, name: [product.brands?.split(',')[0]?.trim(), product.product_name].filter(Boolean).join(' ') || 'Scanned item',
+  const extras = {};
+  for (const [field,key,multiplier] of [['fiber','fiber',1],['sodium','sodium',1000]]) {
+    let value = number(n[key + (serving ? '_serving' : '_100g')]);
+    if (value === null && serving && grams) {
+      const per100=number(n[key+'_100g']);
+      if (per100 !== null) value=per100*grams/100;
+    }
+    extras[field]=value===null ? null : value*multiplier;
+  }
+  return { ...values, ...extras, fruitCups:null, vegetableCups:null, name: [product.brands?.split(',')[0]?.trim(), product.product_name].filter(Boolean).join(' ') || 'Scanned item',
     basis: serving ? (product.serving_size || 'per serving') : 'per 100g',
     basisGrams: serving ? grams : 100, nutritionVersion: 2 };
 }
@@ -28,7 +37,7 @@ export function scaleNutrition(base, amount, unit = 'servings') {
   if (unit === 'g' && (!grams || grams <= 0)) return null;
   const factor = unit === 'g' ? qty / grams : qty;
   if (MACROS.some(k => number(base[k]) === null)) return null;
-  return Object.fromEntries(MACROS.map(k => [k, Number(base[k]) * factor]));
+  return {...Object.fromEntries(MACROS.map(k => [k, Number(base[k]) * factor])), ...Object.fromEntries(DIET_FIELDS.map(([k])=>[k,number(base[k])===null ? null : number(base[k])*factor]))};
 }
 
 // Reverse only this transaction. Preserve unrelated entries added afterward.
@@ -44,4 +53,17 @@ export function undoFoodChange(current, before, after) {
     if (!afterMap.has(entry.id) && !result.some(e => e.id === entry.id)) result.splice(Math.min(i, result.length), 0, entry);
   }
   return result;
+}
+
+export const DIET_FIELDS = [['fiber','Fiber (g)'],['sodium','Sodium (mg)'],['fruitCups','Fruit (cups)'],['vegetableCups','Vegetables (cups)']];
+export const dietValues = entry => Object.fromEntries(DIET_FIELDS.map(([k])=>[k,number(entry[k])]));
+export function dietSummary(entries) {
+  return Object.fromEntries(DIET_FIELDS.map(([k])=>{
+    const known = entries.map(e=>number(e[k])).filter(v=>v!==null);
+    return [k,{total:known.reduce((a,b)=>a+b,0),known:known.length,missing:entries.length-known.length}];
+  }));
+}
+export function dietPerContainer(ingredients, containers) {
+  const summary=dietSummary(ingredients);
+  return Object.fromEntries(DIET_FIELDS.map(([k])=>[k,ingredients.length && !summary[k].missing ? summary[k].total/containers : null]));
 }
