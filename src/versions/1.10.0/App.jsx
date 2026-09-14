@@ -1,3 +1,5 @@
+import {createVersionStorage} from "../../appVersions.js";
+const localStorage = createVersionStorage("1.10.0");
 import { mergeMissingNutrients } from "./nutrientTracking.js";
 import { DIET_FIELDS, number as nutrientNumber } from "./nutrition.js";
 import { foodMemory, matchingFoods, isRepeatRequest, copyFood } from "./foodMemory.js";
@@ -777,7 +779,7 @@ export default function App() {
                 WebkitTapHighlightColor:"transparent"}}>☰</button>
             <div>
               <div style={{fontSize:10,color:T.accent,letterSpacing:"0.18em"}}>
-                {profile.name ? profile.name.toUpperCase()+"'S FITNESS" : "MACRO INTELLIGENCE"}
+                <button onClick={()=>{const url=new URL(window.location.href);url.searchParams.delete("version");window.localStorage.setItem("nl_app_version","current");window.location.assign(url.href);}} style={{background:"none",border:0,color:T.accent,fontSize:11,padding:0}}>v1.10.0 · Return to current ↗</button>
               </div>
               <div style={{fontSize:19,fontWeight:800,letterSpacing:"-0.02em",lineHeight:1.2,
                 background:T.gHeader,WebkitBackgroundClip:"text",backgroundClip:"text",

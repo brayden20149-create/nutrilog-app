@@ -1,17 +1,15 @@
-import VersionPicker from "./VersionPicker.jsx";
+import VersionPicker from "../../VersionPicker.jsx";
+import {createVersionStorage} from "../../appVersions.js";
+const localStorage = createVersionStorage("1.10.0");
 import { nutrientDay, nutrientStreak } from "./nutrientTracking.js";
 import { dietProjection } from "./dietProjection.js";
 import { barcodeNutrition, scaleNutrition, MACROS, DIET_FIELDS, dietValues, dietSummary, dietPerContainer } from "./nutrition.js";
 import { useState, useEffect, useRef } from "react";
 
 
-export const APP_VERSION = "1.10.1";
+export const APP_VERSION = "1.10.0";
 
 export const CHANGELOG = [
-  {version:"1.10.1",date:"Sep 14, 2026",notes:[
-    {text:"Restored the 1.10.0 interface, emoji tabs and Settings layout"},
-    {text:"Open previous versions in Settings → History with separate saved data",action:"settings"},
-  ]},
   { version:"1.10.0", date:"Sep 14, 2026", notes:[
     { text:"Choose extra nutrients, daily targets and streaks in Settings", action:"settings" },
     { text:"Find missing nutrients with AI; estimates stay labeled for review", action:"log" },
@@ -2174,7 +2172,7 @@ export const VersionHistoryPanel = ({ onTry }) => {
   const [open, setOpen] = useState(CHANGELOG[0]?.version || null);
   return (
     <div>
-      <VersionPicker current="current" theme={T}/>
+      <VersionPicker current="1.10.0" theme={T}/>
       {CHANGELOG.map(rel=>{
         const isOpen = open===rel.version;
         const isCurrent = rel.version===APP_VERSION;
