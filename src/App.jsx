@@ -760,6 +760,12 @@ export default function App() {
         @keyframes confettiFall{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(108vh) rotate(720deg);opacity:.9}}
         @keyframes toastPop{0%{transform:translateX(-50%) scale(.7);opacity:0}60%{transform:translateX(-50%) scale(1.05)}100%{transform:translateX(-50%) scale(1);opacity:1}}
         .msg-in{animation:fadein .2s ease;}
+        button,summary{touch-action:manipulation;}
+        button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid ${T.accent}!important;outline-offset:3px;}
+        input,textarea,select{font-size:16px;}
+        .nl-disclosure[open]>summary{margin-bottom:4px;}
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}
+
       `}</style>
 
       {/* ── Header ── */}
@@ -770,7 +776,7 @@ export default function App() {
       }}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <button onClick={()=>setShowHist(true)}
+            <button aria-label="Open menu" onClick={()=>setShowHist(true)}
               style={{background:"none",border:`1px solid ${T.border}`,color:T.muted,
                 borderRadius:10,minWidth:44,minHeight:44,cursor:"pointer",fontSize:18,
                 display:"flex",alignItems:"center",justifyContent:"center",
@@ -839,16 +845,16 @@ export default function App() {
       {/* ── Tab bar ── */}
       <div style={{display:"flex",margin:"10px 14px 0",background:T.surface,
         borderRadius:12,padding:4,border:`1px solid ${T.border}`,flexShrink:0}}>
-        {[["chat","💬"],["log","📋"],["workouts","💪"],["programs","🗂️"]].map(([tab,label])=>(
-          <button key={tab} onClick={()=>setActiveTab(tab)}
+        {[["chat","Chat"],["log","Food"],["workouts","Training"],["programs","Plans"]].map(([tab,label])=>(
+          <button key={tab} aria-current={activeTab===tab?"page":undefined} onClick={()=>setActiveTab(tab)}
             style={{flex:1,background:activeTab===tab?T.gAccent:"none",
-              color:activeTab===tab?"#0b0f0b":"#8fb38f",
+              color:activeTab===tab?"#0b0f0b":T.muted,
               filter:activeTab===tab?"none":"grayscale(0.3)",
               border:"none",borderRadius:10,padding:"10px",cursor:"pointer",
-              fontSize:18,fontWeight:activeTab===tab?700:500,
-              minHeight:42,transition:"all .2s",
-              boxShadow:activeTab===tab?`${T.glow} ${T.accent}88`:"none",
-              transform:activeTab===tab?"translateY(-1px)":"none",
+              fontSize:14,fontWeight:activeTab===tab?700:500,
+              minHeight:48,transition:"background .2s",
+              boxShadow:"none",
+              transform:"none",
               WebkitTapHighlightColor:"transparent"}}>
             {label}
           </button>

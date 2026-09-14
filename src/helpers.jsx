@@ -4,9 +4,17 @@ import { barcodeNutrition, scaleNutrition, MACROS, DIET_FIELDS, dietValues, diet
 import { useState, useEffect, useRef } from "react";
 
 
-export const APP_VERSION = "1.10.0";
+export const APP_VERSION = "1.11.0";
+
+const Disclosure = ({title,children,open=false}) => <details className="nl-disclosure" open={open || undefined} style={{border:`1px solid ${T.border}`,borderRadius:14,background:T.card,marginBottom:12}}><summary style={{padding:14,minHeight:48,cursor:"pointer",fontSize:14,fontWeight:600,color:T.text}}>{title}</summary><div style={{padding:"0 14px 14px"}}>{children}</div></details>;
 
 export const CHANGELOG = [
+  {version:"1.11.0",date:"Sep 14, 2026",notes:[
+    {text:"Simpler Settings categories and a roomier mobile layout",action:"settings"},
+    {text:"Barcode portions first, quick serving picks and a reachable action bar",action:"scan"},
+    {text:"Cleaner meal prep with expandable ingredient details and container controls",action:"meals"},
+    {text:"Labeled navigation, clearer focus states and reduced-motion support"},
+  ]},
   { version:"1.10.0", date:"Sep 14, 2026", notes:[
     { text:"Choose extra nutrients, daily targets and streaks in Settings", action:"settings" },
     { text:"Find missing nutrients with AI; estimates stay labeled for review", action:"log" },
@@ -1375,14 +1383,14 @@ export const MealEditor = ({ meal, onSave, onDelete, onClose, barcodes = {}, onR
     background:T.card, border:`1px solid ${T.border}`, borderRadius:8,
     padding:"8px 10px", color:T.text, fontSize:16, outline:"none", width:"100%",
   };
-  const numStyle = { ...inputStyle, fontSize:15, textAlign:"center", padding:"8px 4px" };
+  const numStyle = { ...inputStyle, fontSize:16, textAlign:"center", padding:"8px 4px" };
 
   return (<>
     <div style={{position:"fixed",inset:0,background:T.overlay,zIndex:300,
-      display:"flex",alignItems:"flex-end"}} onClick={onClose}>
+      display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={onClose}>
       <div onClick={e=>e.stopPropagation()}
         style={{background:T.surface,borderRadius:"20px 20px 0 0",
-          width:"100%",maxHeight:"92vh",overflowY:"auto",
+          width:"100%",maxWidth:640,maxHeight:"92dvh",overflowY:"auto",
           padding:"0 16px env(safe-area-inset-bottom,20px)",
           border:`1px solid ${T.border}`,borderBottom:"none"}}>
         <div style={{width:36,height:4,background:T.border,borderRadius:2,margin:"14px auto 16px"}}/>
@@ -1413,9 +1421,11 @@ export const MealEditor = ({ meal, onSave, onDelete, onClose, barcodes = {}, onR
               recalculate each time you eat one.
             </InfoDot>
           </div>
-          <input type="number" inputMode="numeric" value={containers}
-            onChange={e=>setContainers(e.target.value)}
-            style={{...inputStyle,width:100,textAlign:"center"}}/>
+          <div style={{display:"flex",gap:10}}>
+            <button aria-label="Fewer containers" disabled={+containers<=1} onClick={()=>setContainers(Math.max(1,(+containers||1)-1))} style={{...inputStyle,width:52,minHeight:48,fontSize:24}}>−</button>
+            <input aria-label="Number of containers" type="number" min="1" inputMode="numeric" value={containers} onChange={e=>setContainers(e.target.value)} style={{...inputStyle,width:100,textAlign:"center",fontSize:20}}/>
+            <button aria-label="More containers" onClick={()=>setContainers((+containers||1)+1)} style={{...inputStyle,width:52,minHeight:48,fontSize:24}}>+</button>
+          </div>
         </div>
 
         {/* Ingredients */}
@@ -1435,9 +1445,10 @@ export const MealEditor = ({ meal, onSave, onDelete, onClose, barcodes = {}, onR
                 style={{...inputStyle,flex:1}}/>
               <button onClick={()=>delIng(i)}
                 style={{background:"none",border:`1px solid ${T.border}`,color:T.muted,
-                  borderRadius:8,minWidth:40,fontSize:18,cursor:"pointer",
+                  borderRadius:8,minWidth:44,minHeight:44,fontSize:18,cursor:"pointer",
                   WebkitTapHighlightColor:"transparent"}}>×</button>
             </div>
+            <Disclosure title={`Batch nutrition · ${Math.round(+ing.calories||0)} cal`} open={!ing.barcode && MACROS.some(k=>ing[k]==="")}>
             <div style={{display:"flex",gap:6}}>
               {[["calories","cal",T.cal],["protein","P",T.protein],["carbs","C",T.carbs],["fat","F",T.fat]].map(([k,lbl,col])=>(
                 <div key={k} style={{flex:1}}>
@@ -1448,9 +1459,10 @@ export const MealEditor = ({ meal, onSave, onDelete, onClose, barcodes = {}, onR
               ))}
             </div>
             <DietFields value={ing} onChange={(k,v)=>setIng(i,k,v)}/>
+            </Disclosure>
           </div>
         ))}
-        <div style={{marginBottom:12}}><DietTotals entries={ings}/></div>
+        <Disclosure title="Extra nutrients in this batch"><DietTotals entries={ings}/></Disclosure>
         <button onClick={addIng}
           style={{width:"100%",background:"none",border:`1px dashed ${T.border}`,
             color:T.accent,borderRadius:10,padding:"11px",cursor:"pointer",fontSize:13,
@@ -1497,7 +1509,7 @@ export const MealEditor = ({ meal, onSave, onDelete, onClose, barcodes = {}, onR
         </div>
 
         {/* Buttons */}
-        <div style={{display:"flex",gap:10,paddingBottom:16}}>
+        <div style={{display:"flex",gap:10,position:"sticky",bottom:0,padding:"12px 0 max(env(safe-area-inset-bottom),16px)",background:T.surface,borderTop:`1px solid ${T.border}`,zIndex:1}}>
           {!isNew && (
             <button onClick={()=>onDelete(meal.id)}
               style={{background:"none",border:`1px solid ${T.cal}55`,color:T.cal,
@@ -1885,10 +1897,11 @@ export const ScanConfirm = ({ initial, code, notFound, onLog, onClose, destinati
     const portion = `${Number(amount)} ${unit}`;
     onLog({...total,name:`${base.name} (${portion})`,quantity:Number(amount),quantityUnit:unit,barcode:code}, base);
   };
-  return <div onClick={onClose} style={{position:"fixed",inset:0,background:T.overlay,zIndex:545,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-    <div role="dialog" aria-modal="true" aria-label={isPrep ? "Scanned ingredient" : "Scanned food"} onClick={e=>e.stopPropagation()} style={{boxSizing:"border-box",background:T.surface,color:T.text,border:`1px solid ${T.border}`,borderRadius:18,padding:20,maxWidth:380,width:"100%",maxHeight:"86vh",overflowY:"auto"}}>
+  return <div onClick={onClose} style={{position:"fixed",inset:0,background:T.overlay,zIndex:545,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"max(env(safe-area-inset-top),12px) 12px max(env(safe-area-inset-bottom),12px)"}}>
+    <div role="dialog" aria-modal="true" aria-label={isPrep ? "Scanned ingredient" : "Scanned food"} onClick={e=>e.stopPropagation()} style={{boxSizing:"border-box",background:T.surface,color:T.text,border:`1px solid ${T.border}`,borderRadius:18,padding:18,maxWidth:520,width:"100%",maxHeight:"90dvh",overflowY:"auto"}}>
       <h2 style={{fontSize:20,margin:"0 0 12px"}}>{isPrep ? "Scanned ingredient" : "Scanned food"}</h2>
-      <p style={{fontSize:14,color:T.muted}}>Nutrition for one base serving{initial?.basis ? ` (${initial.basis})` : ""}. Check these values against the label.</p>
+      <div style={{fontSize:22,fontWeight:700,marginBottom:6}}>{d.name || "New product"}</div>
+      <p style={{fontSize:14,color:T.muted,marginBottom:20}}>1 base serving{initial?.basis ? ` · ${initial.basis}` : ""}{Number(d.basisGrams)>0 ? ` · ${d.basisGrams} g` : ""}</p>
       <div style={{marginBottom:12}}>
         <label htmlFor="scan-amount" style={label}>{isPrep ? "Amount used in whole batch" : "Amount eaten"}</label>
         <div style={{display:"grid",gridTemplateColumns:"52px minmax(0,1fr) 52px",gap:10}}>
@@ -1897,36 +1910,39 @@ export const ScanConfirm = ({ initial, code, notFound, onLog, onClose, destinati
           <button type="button" aria-label={unit === "g" ? "Increase grams" : "Increase servings"} onClick={()=>setAmount(current=>String(Number(((Number.isFinite(Number(current)) ? Math.max(0,Number(current)) : 0)+1).toFixed(3))))} style={{...field,minHeight:52,fontSize:26,padding:0,background:T.accent,color:T.bg,touchAction:"manipulation",cursor:"pointer"}}>+</button>
         </div>
       </div>
+      {unit==="servings" && <div style={{display:"flex",gap:8,marginBottom:16}}>{[0.5,1,2,3].map(n=><button key={n} onClick={()=>setAmount(String(n))} aria-pressed={Number(amount)===n} style={{...field,minHeight:44,padding:8,background:Number(amount)===n?T.accent+"22":T.bg,borderColor:Number(amount)===n?T.accent:T.border}}>{n}</button>)}</div>}
       <label style={label}>Measure in<select style={field} value={unit} onChange={e=>setUnit(e.target.value)}><option value="servings">Base servings</option><option value="g">Grams</option></select></label>
       {unit === "g" && !(Number(d.basisGrams)>0) && <p style={{fontSize:14,color:T.cal}}>Enter the grams in one base serving to calculate by weight.</p>}
       <div aria-live="polite" style={{padding:12,background:T.bg,borderRadius:10,marginBottom:16,fontSize:14}}>{total ? `${Math.round(total.calories)} kcal · ${total.protein.toFixed(1)} g protein · ${total.carbs.toFixed(1)} g carbs · ${total.fat.toFixed(1)} g fat` : "Complete the nutrition and amount to see your total."}</div>
       {initial && initial.nutritionVersion !== 2 && <p role="status" style={{fontSize:14,color:T.cal}}>Previously saved barcode: re-enter one serving from the label. Older saved values may include multiple servings.</p>}
       {MACROS.some(k=>d[k]==="") && <p role="status" style={{fontSize:14,color:T.cal}}>Some nutrition values are missing. Enter them from the label, including any zeros.</p>}
-      <DietFields value={d} onChange={set}/>
+      <Disclosure title="Label nutrition & product details" open={notFound || MACROS.some(k=>d[k]==="") || (unit==="g" && !(Number(d.basisGrams)>0))}>
       <label style={label}>Product name<input style={field} value={d.name} onChange={e=>set("name",e.target.value)}/></label>
       <label style={label}>Grams in one base serving (optional)<input style={field} type="number" min="0.001" step="any" inputMode="decimal" value={d.basisGrams} onChange={e=>set("basisGrams",e.target.value)}/></label>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>{MACROS.map(k=><label key={k} style={label}>{k === "calories" ? "Calories (kcal)" : `${k[0].toUpperCase()+k.slice(1)} (g)`}<input style={field} type="number" min="0" step="any" inputMode="decimal" value={d[k]} onChange={e=>set(k,e.target.value)}/></label>)}</div>
+      <DietFields value={d} onChange={set}/>
+      </Disclosure>
       {isPrep && <p style={{fontSize:14,marginBottom:12}}>Enter the total amount used in the whole batch. For pasta and rice, use the dry weight when the label is for the dry product.</p>}
       {notFound && <p style={{fontSize:14,color:T.cal,marginBottom:12}}>Barcode not found. Enter the label values once to remember this ingredient.</p>}
-      <div style={{display:"flex",gap:10}}><button onClick={onClose} style={{...field,cursor:"pointer"}}>Cancel</button><button disabled={!valid} onClick={submit} style={{...field,background:T.accent,color:T.bg,opacity:valid?1:0.4,cursor:"pointer"}}>{isPrep ? "Add to prep" : "Log food"}</button></div>
+      <div style={{display:"flex",gap:10,position:"sticky",bottom:-18,background:T.surface,padding:"12px 0",borderTop:`1px solid ${T.border}`}}><button onClick={onClose} style={{...field,minHeight:50,flex:1,cursor:"pointer"}}>Cancel</button><button disabled={!valid} onClick={submit} style={{...field,minHeight:50,flex:2,fontWeight:700,background:T.accent,color:T.bg,opacity:valid?1:0.4,cursor:"pointer"}}>{isPrep ? "Add to prep" : "Log food"}</button></div>
     </div>
   </div>;
 };
 
-export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, onClearData }) => {
+export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, onClearData, section = "general" }) => {
   const [showCache, setShowCache] = useState(false);
   const Toggle = ({ on, onClick }) => (
     <button onClick={onClick}
-      style={{width:46,height:28,borderRadius:99,border:"none",cursor:"pointer",flexShrink:0,
+      style={{width:54,height:44,borderRadius:99,border:"none",cursor:"pointer",flexShrink:0,
         background:on?T.accent:T.border,position:"relative",transition:"background .2s",
         WebkitTapHighlightColor:"transparent"}}>
-      <span style={{position:"absolute",top:3,left:on?21:3,width:22,height:22,borderRadius:"50%",
+      <span style={{position:"absolute",top:11,left:on?29:3,width:22,height:22,borderRadius:"50%",
         background:"#fff",transition:"left .2s"}}/>
     </button>
   );
   const Row = ({ label, sub, children }) => (
-    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-      padding:"12px 0",borderBottom:`1px solid ${T.border}`,gap:12}}>
+    <div style={{display:"flex",alignItems:"flex-start",flexDirection:"column",
+      padding:"16px 0",borderBottom:`1px solid ${T.border}`,gap:12}}>
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontSize:14,color:T.text,fontWeight:600}}>{label}</div>
         {sub && <div style={{fontSize:11,color:T.muted,marginTop:2,lineHeight:1.4}}>{sub}</div>}
@@ -1940,7 +1956,7 @@ export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, on
       {options.map(([val,lbl])=>(
         <button key={val} onClick={()=>onPick(val)}
           style={{background:value===val?T.accent:"none",color:value===val?"#0b0f0b":T.muted,
-            border:"none",borderRadius:7,padding:"6px 10px",fontSize:12,fontWeight:700,cursor:"pointer",
+            border:"none",borderRadius:7,minHeight:44,padding:"8px 10px",fontSize:12,fontWeight:700,cursor:"pointer",
             WebkitTapHighlightColor:"transparent"}}>{lbl}</button>
       ))}
     </div>
@@ -1948,6 +1964,7 @@ export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, on
   const cacheKeys = Object.keys(barcodes||{});
   return (
     <div>
+      {section==="general" && <>
       <Row label="Units" sub="Weights & water display">
         <Seg value={settings.units} options={[["imperial","lbs/oz"],["metric","kg/mL"]]}
           onPick={v=>onSet("units",v)}/>
@@ -1960,9 +1977,11 @@ export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, on
       </Row>
       <Row label="Default tab" sub="Which tab opens on launch">
         <Seg value={settings.landingTab}
-          options={[["chat","💬"],["log","📋"],["workouts","💪"],["train","🏋️"]]}
+          options={[["chat","Chat"],["log","Food"],["workouts","Training"],["programs","Plans"]]}
           onPick={v=>onSet("landingTab",v)}/>
       </Row>
+      </>}
+      {section==="ai" && <>
       <Row label="AI style" sub="How the coaches & logger reply">
         <Seg value={settings.aiStyle}
           options={[["concise","Short"],["balanced","Balanced"],["detailed","Detailed"]]}
@@ -1972,6 +1991,8 @@ export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, on
         <Toggle on={settings.webSearch} onClick={()=>onSet("webSearch",!settings.webSearch)}/>
       </Row>
 
+      </>}
+      {section==="nutrition" && <>
       <Row label="Diet projection" sub="Show the optional summary in your food log">
         <Toggle on={settings.showDietProjection} onClick={()=>onSet("showDietProjection",!settings.showDietProjection)}/>
       </Row>
@@ -1995,6 +2016,8 @@ export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, on
         })}
       </section>
 
+      </>}
+      {section==="data" && <>
       {/* Barcode cache management */}
       <div style={{marginTop:16}}>
         <button onClick={()=>setShowCache(s=>!s)}
@@ -2046,6 +2069,7 @@ export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, on
           might want it later.
         </div>
       </div>
+      </>}
     </div>
   );
 };
@@ -2095,35 +2119,35 @@ export const SettingsModal = ({ current, onApply, onClose, settings, onSet, barc
   return (
     <div onClick={onClose}
       style={{position:"fixed",inset:0,background:T.overlay,zIndex:520,
-        display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+        display:"flex",alignItems:"center",justifyContent:"center",padding:"max(env(safe-area-inset-top),12px) 12px max(env(safe-area-inset-bottom),12px)"}}>
       <div onClick={e=>e.stopPropagation()}
         style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:18,
-          maxWidth:380,width:"100%",maxHeight:"84vh",display:"flex",flexDirection:"column",
+          maxWidth:560,width:"100%",maxHeight:"90dvh",display:"flex",flexDirection:"column",
           boxShadow:`0 10px 50px #000a`,overflow:"hidden"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
           padding:"16px 18px 12px",borderBottom:`1px solid ${T.border}`}}>
           <div>
             <div style={{fontSize:10,color:T.accent,letterSpacing:"0.12em"}}>SETTINGS</div>
-            <div style={{fontSize:18,fontWeight:800}}>Appearance</div>
+            <div style={{fontSize:18,fontWeight:800}}>Make it yours</div>
           </div>
-          <button onClick={onClose}
+          <button aria-label="Close settings" onClick={onClose}
             style={{background:"none",border:`1px solid ${T.border}`,color:T.muted,
-              borderRadius:10,minWidth:38,minHeight:38,cursor:"pointer",fontSize:14,
+              borderRadius:10,minWidth:44,minHeight:44,cursor:"pointer",fontSize:14,
               WebkitTapHighlightColor:"transparent"}}>✕</button>
         </div>
         {/* Tab switch */}
-        <div style={{display:"flex",gap:6,padding:"12px 14px 0"}}>
-          {[["general","General"],["presets","Appearance"],["history","History"]].map(([id,lbl])=>(
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:6,padding:"12px 14px 0"}}>
+          {[["general","General"],["nutrition","Nutrition"],["ai","AI"],["presets","Appearance"],["data","Data"],["history","Updates"]].map(([id,lbl])=>(
             <button key={id} onClick={()=>setTab(id)}
               style={{flex:1,background:tab===id?T.gAccent:T.card,
                 color:tab===id?"#0b0f0b":T.text,border:`1px solid ${T.border}`,
                 borderRadius:10,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer",
-                minHeight:40,WebkitTapHighlightColor:"transparent"}}>{lbl}</button>
+                minHeight:44,WebkitTapHighlightColor:"transparent"}}>{lbl}</button>
           ))}
         </div>
         <div style={{overflowY:"auto",padding:"14px",WebkitOverflowScrolling:"touch"}}>
-          {tab==="general" ? (
-            <GeneralSettings settings={settings} onSet={onSet} barcodes={barcodes}
+          {["general","nutrition","ai","data"].includes(tab) ? (
+            <GeneralSettings key={tab} section={tab} settings={settings} onSet={onSet} barcodes={barcodes}
               onDeleteBarcode={onDeleteBarcode} onClearData={onClearData}/>
           ) : tab==="presets" ? (
             <>
@@ -2134,9 +2158,7 @@ export const SettingsModal = ({ current, onApply, onClose, settings, onSet, barc
                   marginTop:4,marginBottom:16,WebkitTapHighlightColor:"transparent"}}>
                 Reset to default
               </button>
-              <div style={{fontSize:10,color:T.accent,letterSpacing:"0.12em",marginBottom:10}}>
-                CUSTOM COLORS
-              </div>
+              <Disclosure title="Customize individual colors">
               <div style={{fontSize:12,color:T.muted,marginBottom:10,lineHeight:1.5}}>
                 Override any color individually.
               </div>
@@ -2155,6 +2177,7 @@ export const SettingsModal = ({ current, onApply, onClose, settings, onSet, barc
                   WebkitTapHighlightColor:"transparent"}}>
                 Apply custom colors
               </button>
+              </Disclosure>
             </>
           ) : tab==="history" ? (
             <VersionHistoryPanel onTry={onTry}/>
