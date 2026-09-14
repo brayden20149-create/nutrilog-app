@@ -2,7 +2,13 @@ const macros = ['calories','protein','carbs','fat'];
 const finite = n => typeof n === 'number' && Number.isFinite(n) && n >= 0;
 
 // Project the recent logged pattern against the user's own goals, not weight or health outcomes.
-export function dietProjection(days, goals, today) {
+export function dietProjection(days, goals, today, streaks = {}) {
+  if (['calories','protein','carbs'].every(k=>streaks[k]>=3)) return {
+    title:'Your recent goal streaks are strong',
+    explanation:`You’re on ${streaks.calories} calorie, ${streaks.protein} protein and ${streaks.carbs} carb goal days in a row, using the same rules as your streak tiles. Your fat streak is ${streaks.fat||0} days.`,
+    change:'Keep your routine consistent. Meeting macro goals alone does not establish overall diet quality.',
+    days:Math.min(streaks.calories,streaks.protein,streaks.carbs),
+  };
   const cutoff = new Date(today+'T12:00:00Z');
   cutoff.setUTCDate(cutoff.getUTCDate()-14);
   const first = cutoff.toISOString().slice(0,10);
@@ -25,8 +31,8 @@ export function dietProjection(days, goals, today) {
   if (calories !== null || protein !== null) {
     title='Close to your current goals';
     change='Keep your portions and meal routine consistent; your logged averages are close to your targets.';
-    if (protein !== null && protein < .9) {
-      title='Protein is your biggest gap';
+    if (protein !== null && protein < .9 && !(streaks.protein>=3)) {
+      title='Recent logged protein is below target';
       explanation+=` That’s about ${Math.round(goals.protein-avg.protein)} g protein below your daily target.`;
       change=calories !== null && calories>1.1 ? 'Swap part of a regular meal or snack for a leaner protein option, rather than adding another meal.' : 'Add a protein source to the meal where you usually get the least protein.';
     } else if (calories !== null && calories > 1.1) {

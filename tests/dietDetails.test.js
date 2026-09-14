@@ -11,5 +11,5 @@ test('prep divides complete fields only without presenting partial sums as compl
  assert.equal(d.fiber,3);assert.equal(d.sodium,null);assert.equal(d.fruitCups,0.2);assert.equal(d.vegetableCups,0.4);
 });
 test('blank and invalid manual values remain unknown',()=>{
- assert.deepEqual(dietValues({fiber:'',sodium:-1,fruitCups:'0',vegetableCups:'1.5'}),{fiber:null,sodium:null,fruitCups:0,vegetableCups:1.5});
+ assert.deepEqual(dietValues({fiber:'',sodium:-1,fruitCups:'0',vegetableCups:'1.5'}),{fiber:null,sodium:null,sugar:null,saturatedFat:null,potassium:null,calcium:null,iron:null,fruitCups:0,vegetableCups:1.5});
 });

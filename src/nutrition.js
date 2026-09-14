@@ -17,7 +17,7 @@ export function barcodeNutrition(product) {
     return [MACROS[i], v];
   }));
   const extras = {};
-  for (const [field,key,multiplier] of [['fiber','fiber',1],['sodium','sodium',1000]]) {
+  for (const [field,key,multiplier] of [['fiber','fiber',1],['sodium','sodium',1000],['sugar','sugars',1],['saturatedFat','saturated-fat',1],['potassium','potassium',1000],['calcium','calcium',1000],['iron','iron',1000]]) {
     let value = number(n[key + (serving ? '_serving' : '_100g')]);
     if (value === null && serving && grams) {
       const per100=number(n[key+'_100g']);
@@ -55,7 +55,7 @@ export function undoFoodChange(current, before, after) {
   return result;
 }
 
-export const DIET_FIELDS = [['fiber','Fiber (g)'],['sodium','Sodium (mg)'],['fruitCups','Fruit (cups)'],['vegetableCups','Vegetables (cups)']];
+export const DIET_FIELDS = [['fiber','Fiber (g)'],['sodium','Sodium (mg)'],['sugar','Total sugar (g)'],['saturatedFat','Saturated fat (g)'],['potassium','Potassium (mg)'],['calcium','Calcium (mg)'],['iron','Iron (mg)'],['fruitCups','Fruit (cups)'],['vegetableCups','Vegetables (cups)']];
 export const dietValues = entry => Object.fromEntries(DIET_FIELDS.map(([k])=>[k,number(entry[k])]));
 export function dietSummary(entries) {
   return Object.fromEntries(DIET_FIELDS.map(([k])=>{

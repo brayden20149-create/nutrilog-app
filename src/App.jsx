@@ -1,13 +1,17 @@
+import { mergeMissingNutrients } from "./nutrientTracking.js";
+import { DIET_FIELDS, number as nutrientNumber } from "./nutrition.js";
 import { foodMemory, matchingFoods, isRepeatRequest, copyFood } from "./foodMemory.js";
 import { undoFoodChange } from "./nutrition.js";
 import { useState, useEffect, useRef } from "react";
-import { APP_VERSION, DietProjection, T, applyTheme, loadTheme, saveTheme, DEFAULT_SETTINGS, loadSettings, saveSettings, toDisplayWeight, fromDisplayWeight, weightUnit, toDisplayWater, waterUnit, DEFAULT_GOALS, todayKey, isToday, fmtDate, fmtFull, _get, _set, loadAll, saveAll, loadGoals, saveGoals, loadMeals, saveMeals, loadPrograms, savePrograms, cleanWorkoutDay, loadWorkouts, saveWorkouts, loadStandout, saveStandout, loadWeights, saveWeights, loadWater, saveWater, WATER_STEP, loadBarcodes, saveBarcodes, HAPTICS_ON, haptic, setHapticsOn, DEFAULT_PROFILE, loadProfile, saveProfile, weekStart, addDays, weekDays, dowShort, dayNum, dayHitsGoal, sumDay, analyzeWorkoutDay, normName, computeStreak, mealPerContainer, InfoDot, Ring, Bar, EntryRow, Bubble, HistoryDrawer, MealEditor, ProfileTab, ProgramsTab, Confetti, Toast, BarcodeScanner, ScanConfirm, SettingsModal, WelcomeModal, lookupBarcode, computeHabits, callAssistant } from "./helpers.jsx";
+import { APP_VERSION, ExtraNutrients, findMissingNutrients, DietProjection, T, applyTheme, loadTheme, saveTheme, DEFAULT_SETTINGS, loadSettings, saveSettings, toDisplayWeight, fromDisplayWeight, weightUnit, toDisplayWater, waterUnit, DEFAULT_GOALS, todayKey, isToday, fmtDate, fmtFull, _get, _set, loadAll, saveAll, loadGoals, saveGoals, loadMeals, saveMeals, loadPrograms, savePrograms, cleanWorkoutDay, loadWorkouts, saveWorkouts, loadStandout, saveStandout, loadWeights, saveWeights, loadWater, saveWater, WATER_STEP, loadBarcodes, saveBarcodes, HAPTICS_ON, haptic, setHapticsOn, DEFAULT_PROFILE, loadProfile, saveProfile, weekStart, addDays, weekDays, dowShort, dayNum, dayHitsGoal, sumDay, analyzeWorkoutDay, normName, computeStreak, mealPerContainer, InfoDot, Ring, Bar, EntryRow, Bubble, HistoryDrawer, MealEditor, ProfileTab, ProgramsTab, Confetti, Toast, BarcodeScanner, ScanConfirm, SettingsModal, WelcomeModal, lookupBarcode, computeHabits, callAssistant } from "./helpers.jsx";
 
 export default function App() {
   const [allDays,    setAllDays]    = useState({});
   const daysRef = useRef(allDays);
   daysRef.current = allDays;
   const [foodUndo, setFoodUndo] = useState(null);
+  const [nutrientLoading,setNutrientLoading]=useState(false);
+  const [nutrientMessage,setNutrientMessage]=useState("");
   const [repeatFood, setRepeatFood] = useState(null);
   const [selDay,     setSelDay]     = useState(todayKey());
   const [goals,      setGoals]      = useState({...DEFAULT_GOALS});
@@ -236,6 +240,26 @@ export default function App() {
       }
     }
     return {newGoals:gl, newEntries:es, newWorkouts:wk};
+  };
+
+  const fillMissingNutrients = async () => {
+    if(nutrientLoading) return;
+    const day=selDay;
+    const keys=DIET_FIELDS.map(([k])=>k).filter(k=>settings.extraNutrients?.[k]?.enabled);
+    const snapshot=(daysRef.current[day]||[]).filter(e=>keys.some(k=>nutrientNumber(e[k])===null)).slice(0,6);
+    if(!snapshot.length) {setNutrientMessage("No missing values for your selected nutrients.");return;}
+    setNutrientLoading(true);setNutrientMessage("");
+    try {
+      const results=await findMissingNutrients(snapshot,keys,settings.webSearch);
+      let changed=0;
+      mutEntries(current=>{
+        const next=mergeMissingNutrients(current,snapshot,results,keys);
+        changed=next.filter((e,i)=>e!==current[i]).length;
+        return next;
+      },day);
+      setNutrientMessage(changed ? `Updated ${changed} foods. Tap their entries to review AI-filled values. Run again for remaining foods.` : "No reliable values found for these portions. Add a label or exact portion to the food entry.");
+    } catch(e) {setNutrientMessage("Could not look up nutrients. "+e.message);}
+    finally {setNutrientLoading(false);}
   };
 
   const handlePhoto = (file, setter = setPendingImage) => {
@@ -1065,7 +1089,9 @@ export default function App() {
             </div>
           </div>
 
-          <DietProjection days={allDays} goals={goals} today={todayKey()}/>
+          <ExtraNutrients days={allDays} day={selDay} today={todayKey()} settings={settings} onFind={fillMissingNutrients} loading={nutrientLoading} error={nutrientMessage}/>
+          {settings.showDietProjection && <DietProjection days={allDays} goals={goals} today={todayKey()} streaks={streaks}/>}
+
           {/* Entries */}
           {entries.length>0 ? (<>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,marginTop:6}}>
