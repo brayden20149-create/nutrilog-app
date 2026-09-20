@@ -31,3 +31,9 @@ export function muscleTrends(workouts,today,overrides={}) {
  days:days.sort((a,b)=>b.sets-a.sets||b.day.localeCompare(a.day)),
  exercises:[...new Set(Object.values(workouts).flatMap(es=>(es||[]).map(e=>e.name)).filter(Boolean))].sort()};
 }
+
+export function exerciseSessions(workouts,name,through) {
+ return Object.keys(workouts).filter(day=>day<=through).sort().reverse().map(day=>({
+  day,sets:(workouts[day]||[]).filter(e=>(e.name||"").trim().toLowerCase()===name.trim().toLowerCase())
+ })).filter(s=>s.sets.length);
+}

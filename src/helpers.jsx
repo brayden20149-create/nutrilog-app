@@ -5,9 +5,13 @@ import { barcodeNutrition, scaleNutrition, MACROS, DIET_FIELDS, dietValues, diet
 import { useState, useEffect, useRef } from "react";
 
 
-export const APP_VERSION = "1.10.3";
+export const APP_VERSION = "1.10.4";
 
 export const CHANGELOG = [
+ {version:"1.10.4",date:"Sep 20, 2026",notes:[
+  {text:"Compact muscle-group bars and stat badges keep the overview short",action:"workouts"},
+  {text:"Tap a group, exercise and date to inspect individual weights, reps and sets",action:"workouts"},
+ ]},
  {version:"1.10.3",date:"Sep 20, 2026",notes:[
   {text:"Saved food fractions show a multiplier and scaled macros before logging",action:"chat"},
   {text:"Tap a volume-change badge to see the prior session and calculation",action:"workouts"},
