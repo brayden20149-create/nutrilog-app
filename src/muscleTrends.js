@@ -1,3 +1,4 @@
+import {exerciseKey,uniqueExerciseNames} from "./exerciseIdentity.js";
 export const MUSCLE_GROUPS=["Back","Chest","Legs","Shoulders","Biceps","Triceps","Core","Other"];
 export function muscleGroup(name,overrides={}) {
  if(MUSCLE_GROUPS.includes(overrides[name]))return overrides[name];
@@ -11,7 +12,7 @@ export function muscleGroup(name,overrides={}) {
  if(/bicep|curl/.test(n))return "Biceps";
  return "Other";
 }
-export function muscleTrends(workouts,today,overrides={}) {
+export function muscleTrends(workouts,today,overrides={},aliases={}) {
  const end=Date.parse(today+"T12:00:00Z");
  const rows=Object.fromEntries(MUSCLE_GROUPS.map(group=>[group,{group,sets:0,previousSets:0,days:new Set(),exercises:new Set()}]));
  const days=[];
@@ -27,13 +28,13 @@ export function muscleTrends(workouts,today,overrides={}) {
   }
   if(age<14 && Object.keys(counts).length)days.push({day,sets:Object.values(counts).reduce((a,b)=>a+b,0),groups:counts});
  }
- return {groups:Object.values(rows).map(r=>({...r,days:r.days.size,exercises:[...r.exercises],delta:r.previousSets?Math.round((r.sets-r.previousSets)/r.previousSets*100):null})).filter(r=>r.sets||r.previousSets).sort((a,b)=>b.sets-a.sets),
+ return {groups:Object.values(rows).map(r=>({...r,days:r.days.size,exercises:uniqueExerciseNames([...r.exercises],aliases),delta:r.previousSets?Math.round((r.sets-r.previousSets)/r.previousSets*100):null})).filter(r=>r.sets||r.previousSets).sort((a,b)=>b.sets-a.sets),
  days:days.sort((a,b)=>b.sets-a.sets||b.day.localeCompare(a.day)),
  exercises:[...new Set(Object.values(workouts).flatMap(es=>(es||[]).map(e=>e.name)).filter(Boolean))].sort()};
 }
 
-export function exerciseSessions(workouts,name,through) {
+export function exerciseSessions(workouts,name,through,aliases={}) {
  return Object.keys(workouts).filter(day=>day<=through).sort().reverse().map(day=>({
-  day,sets:(workouts[day]||[]).filter(e=>(e.name||"").trim().toLowerCase()===name.trim().toLowerCase())
+  day,sets:(workouts[day]||[]).filter(e=>exerciseKey(e.name||"",aliases)===exerciseKey(name,aliases))
  })).filter(s=>s.sets.length);
 }

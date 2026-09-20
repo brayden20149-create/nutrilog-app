@@ -5,9 +5,14 @@ import { barcodeNutrition, scaleNutrition, MACROS, DIET_FIELDS, dietValues, diet
 import { useState, useEffect, useRef } from "react";
 
 
-export const APP_VERSION = "1.10.4";
+export const APP_VERSION = "1.10.5";
 
 export const CHANGELOG = [
+ {version:"1.10.5",date:"Sep 20, 2026",notes:[
+  {text:"Equivalent exercise wording shares one history; original sets stay intact",action:"workouts"},
+  {text:"Link other names under Groups → Combine exercise names",action:"workouts"},
+  {text:"Workout popups stay above navigation with a reachable close button",action:"workouts"},
+ ]},
  {version:"1.10.4",date:"Sep 20, 2026",notes:[
   {text:"Compact muscle-group bars and stat badges keep the overview short",action:"workouts"},
   {text:"Tap a group, exercise and date to inspect individual weights, reps and sets",action:"workouts"},

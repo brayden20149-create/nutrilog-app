@@ -1,3 +1,5 @@
+import {createPortal} from "react-dom";
+import {exerciseNameKey,exerciseKey,uniqueExerciseNames} from "./exerciseIdentity.js";
 import {useEffect,useRef,useState} from "react";
 import {muscleTrends,muscleGroup,MUSCLE_GROUPS,exerciseSessions} from "./muscleTrends.js";
 
@@ -5,7 +7,7 @@ export function VolumeComparison({detail,onClose,T}) {
  const close=useRef(null);
  useEffect(()=>{const previous=document.activeElement;close.current?.focus();const key=e=>{if(e.key==="Escape")onClose();if(e.key==="Tab"){e.preventDefault();close.current?.focus();}};document.addEventListener("keydown",key);return()=>{document.removeEventListener("keydown",key);previous?.focus();};},[]);
  const prev=detail.comparison;
- return <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:570,background:T.overlay,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+ return createPortal(<div onTouchStart={e=>e.stopPropagation()} onTouchEnd={e=>e.stopPropagation()} onClick={onClose} style={{position:"fixed",inset:0,zIndex:10000,fontFamily:"-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif",background:T.overlay,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
  <div role="dialog" aria-modal="true" aria-label="Workout volume comparison" onClick={e=>e.stopPropagation()} style={{background:T.surface,color:T.text,border:`1px solid ${T.border}`,borderRadius:14,padding:16,width:"100%",maxWidth:360,maxHeight:"75dvh",overflowY:"auto"}}>
  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}><strong>{detail.name} · {detail.volDelta>0?"+":""}{detail.volDelta}%</strong><button ref={close} aria-label="Close comparison" onClick={onClose} style={{background:"none",border:0,color:T.text,minHeight:44,minWidth:44,fontSize:18}}>×</button></div>
  {[[detail.day,detail.name,detail.sets,detail.volume],[prev.day,prev.name,prev.sets,prev.volume]].map(([day,name,sets,volume],i)=><div key={i} style={{padding:"10px 0",borderTop:`1px solid ${T.border}`}}>
@@ -15,7 +17,7 @@ export function VolumeComparison({detail,onClose,T}) {
  </div>)}
  <p style={{fontSize:12,lineHeight:1.5}}>Volume = sum of weight × reps as logged. ({detail.volume.toLocaleString()} − {prev.volume.toLocaleString()}) ÷ {prev.volume.toLocaleString()} × 100 = {detail.volDelta}%.</p>
  <p style={{fontSize:12,lineHeight:1.5,color:T.muted,marginTop:8}}>Compared with the most recent earlier session with a matching exercise name. An unfinished session or different set count can lower this number; it is not a strength-loss score.</p>
- </div></div>;
+ </div></div>,document.body);
 }
 
 
@@ -36,24 +38,25 @@ function InsightPopup({title,onClose,children,T}) {
   document.addEventListener("keydown",key);
   return()=>{document.removeEventListener("keydown",key);previous?.focus();};
  },[]);
- return <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:570,background:T.overlay,display:"flex",alignItems:"center",justifyContent:"center",padding:"max(env(safe-area-inset-top),16px) 16px max(env(safe-area-inset-bottom),16px)"}}>
+ return createPortal(<div onTouchStart={e=>e.stopPropagation()} onTouchEnd={e=>e.stopPropagation()} onClick={onClose} style={{position:"fixed",inset:0,zIndex:10000,fontFamily:"-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif",background:T.overlay,display:"flex",alignItems:"center",justifyContent:"center",padding:"max(env(safe-area-inset-top),16px) 16px max(env(safe-area-inset-bottom),16px)"}}>
  <div ref={box} role="dialog" aria-modal="true" aria-label={title} onClick={e=>e.stopPropagation()} style={{background:T.surface,color:T.text,border:`1px solid ${T.border}`,borderRadius:16,width:"100%",maxWidth:400,maxHeight:"78dvh",overflowY:"auto",padding:14}}>
- <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8}}><strong style={{fontSize:16}}>{title}</strong><button aria-label="Close details" onClick={onClose} style={{background:"none",border:0,color:T.text,fontSize:20,minWidth:44,minHeight:44}}>×</button></div>
- {children}</div></div>;
+ <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8,position:"sticky",top:-14,background:T.surface,zIndex:1}}><strong style={{fontSize:16}}>{title}</strong><button aria-label="Close details" onClick={onClose} style={{background:"none",border:0,color:T.text,fontSize:20,minWidth:44,minHeight:44}}>×</button></div>
+ {children}</div></div>,document.body);
 }
 export function MuscleInsights({workouts,today,settings,onSet,T}) {
  const [view,setView]=useState(null);
  const [exercise,setExercise]=useState("");
  const [session,setSession]=useState("");
  const overrides=settings.muscleGroups||{};
- const data=muscleTrends(workouts,today,overrides);
+ const aliases=settings.exerciseAliases||{};
+ const data=muscleTrends(workouts,today,overrides,aliases);
  const max=Math.max(1,...data.groups.map(g=>g.sets));
  const chip={fontSize:11,padding:"3px 6px",borderRadius:6,background:T.bg,color:T.muted,whiteSpace:"nowrap"};
  const row={width:"100%",textAlign:"left",background:T.card,border:0,borderRadius:9,color:T.text,cursor:"pointer",padding:"9px 10px",marginBottom:5};
  const select={fontSize:16,background:T.bg,color:T.text,border:`1px solid ${T.border}`,borderRadius:8,padding:8,width:"100%",minWidth:0};
  const open=v=>{setView(v);setExercise("");setSession("");};
  const group=data.groups.find(g=>g.group===view?.group);
- const sessions=exercise?exerciseSessions(workouts,exercise,today):[];
+ const sessions=exercise?exerciseSessions(workouts,exercise,today,aliases):[];
  const chosen=sessions.find(s=>s.day===session)||sessions[0];
  const showSets=sets=><div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:7,marginTop:12}}>
   {sets.map((s,i)=><div key={s.id??i} style={{padding:10,borderRadius:9,background:T.card}}>
@@ -88,7 +91,7 @@ export function MuscleInsights({workouts,today,settings,onSet,T}) {
  <div style={{display:"flex",gap:6,marginBottom:12}}><span style={chip}>{group?.sets??0} sets now</span><span style={chip}>{group?.previousSets??0} earlier</span><span style={chip}>{group?.days??0} days</span></div>
  {!exercise ? <>
  <p style={{fontSize:12,color:T.muted,marginBottom:10}}>Tap an exercise for weights & reps.</p>
- {(group?.exercises||[]).map(name=>{const recent=exerciseSessions(workouts,name,today)[0];return <button key={name} onClick={()=>{setExercise(name);setSession("");}} style={row}>
+ {(group?.exercises||[]).map(name=>{const recent=exerciseSessions(workouts,name,today,aliases)[0];return <button key={name} onClick={()=>{setExercise(name);setSession("");}} style={row}>
  <div style={{fontSize:13,fontWeight:600}}>{name} <span style={{float:"right",color:T.muted}}>›</span></div>
  <div style={{fontSize:11,color:T.muted,marginTop:4}}>{recent?.day} · {recent?.sets.length} sets</div>
  </button>;})}
@@ -108,12 +111,18 @@ export function MuscleInsights({workouts,today,settings,onSet,T}) {
  <select aria-label="Workout day" value={session||data.days[0]?.day||""} onChange={e=>{setSession(e.target.value);setExercise("");}} style={select}>
  {data.days.map(d=><option key={d.day} value={d.day}>{d.day} · {d.sets} sets</option>)}
  </select>
- {(()=>{const day=session||data.days[0]?.day;const entries=workouts[day]||[];const names=[...new Set(entries.map(e=>e.name))];return <>
+ {(()=>{const day=session||data.days[0]?.day;const entries=workouts[day]||[];const names=uniqueExerciseNames(entries.map(e=>e.name),aliases);return <>
  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:12}}>{names.map(name=><button key={name} onClick={()=>setExercise(name)} style={{...chip,border:`1px solid ${exercise===name?T.accent:T.border}`,color:exercise===name?T.accent:T.text,cursor:"pointer",padding:8}}>{name}</button>)}</div>
- {exercise ? showSets(entries.filter(e=>e.name===exercise)):<p style={{fontSize:12,color:T.muted,marginTop:10}}>Select an exercise to see each set.</p>}
+ {exercise ? showSets(entries.filter(e=>exerciseKey(e.name,aliases)===exerciseKey(exercise,aliases))):<p style={{fontSize:12,color:T.muted,marginTop:10}}>Select an exercise to see each set.</p>}
  </>;})()}
  </>}
- {view.type==="edit" && data.exercises.map(name=><label key={name} style={{display:"flex",alignItems:"center",gap:8,justifyContent:"space-between",marginBottom:10,fontSize:12}}><span>{name}</span><select aria-label={`Muscle group for ${name}`} value={muscleGroup(name,overrides)} onChange={e=>onSet("muscleGroups",{...overrides,[name]:e.target.value})} style={{...select,width:"45%"}}>{MUSCLE_GROUPS.map(g=><option key={g}>{g}</option>)}</select></label>)}
+ {view.type==="edit" && <>
+ <details style={{marginBottom:16}}><summary style={{fontSize:13,color:T.accent,cursor:"pointer",padding:"8px 0"}}>Combine exercise names</summary>
+ <p style={{fontSize:12,color:T.muted,marginBottom:10}}>Choose the same history for names you consider equivalent. Original logs and all sets are preserved. Choose “Keep separate” to undo a manual link.</p>
+ {data.exercises.map(name=><label key={name} style={{display:"block",fontSize:12,marginBottom:12}}>{name}<select aria-label={`History for ${name}`} value={aliases[name]||""} onChange={e=>{const next={...aliases};if(e.target.value)next[name]=e.target.value;else delete next[name];onSet("exerciseAliases",next);}} style={{...select,marginTop:4}}><option value="">Keep separate (automatic wording matches still apply)</option>{uniqueExerciseNames(data.exercises).map(target=><option key={target} value={exerciseNameKey(target)}>{target}</option>)}</select></label>)}
+ </details>
+ {data.exercises.map(name=><label key={name} style={{display:"flex",alignItems:"center",gap:8,justifyContent:"space-between",marginBottom:10,fontSize:12}}><span>{name}</span><select aria-label={`Muscle group for ${name}`} value={muscleGroup(name,overrides)} onChange={e=>onSet("muscleGroups",{...overrides,[name]:e.target.value})} style={{...select,width:"45%"}}>{MUSCLE_GROUPS.map(g=><option key={g}>{g}</option>)}</select></label>)}
+ </>}
  </InsightPopup>}
  </details>;
 }
