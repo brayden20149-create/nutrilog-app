@@ -1,6 +1,6 @@
 import { mergeMissingNutrients } from "./nutrientTracking.js";
 import { DIET_FIELDS, number as nutrientNumber } from "./nutrition.js";
-import { foodMemory, matchingFoods, isRepeatRequest, copyFood } from "./foodMemory.js";
+import { foodMemory, matchingFoods, isRepeatRequest, copyFood, isHistoryLookup, historyReply } from "./foodMemory.js";
 import { undoFoodChange } from "./nutrition.js";
 import { useState, useEffect, useRef } from "react";
 import { APP_VERSION, ExtraNutrients, findMissingNutrients, DietProjection, T, applyTheme, loadTheme, saveTheme, DEFAULT_SETTINGS, loadSettings, saveSettings, toDisplayWeight, fromDisplayWeight, weightUnit, toDisplayWater, waterUnit, DEFAULT_GOALS, todayKey, isToday, fmtDate, fmtFull, _get, _set, loadAll, saveAll, loadGoals, saveGoals, loadMeals, saveMeals, loadPrograms, savePrograms, cleanWorkoutDay, loadWorkouts, saveWorkouts, loadStandout, saveStandout, loadWeights, saveWeights, loadWater, saveWater, WATER_STEP, loadBarcodes, saveBarcodes, HAPTICS_ON, haptic, setHapticsOn, DEFAULT_PROFILE, loadProfile, saveProfile, weekStart, addDays, weekDays, dowShort, dayNum, dayHitsGoal, sumDay, analyzeWorkoutDay, normName, computeStreak, mealPerContainer, InfoDot, Ring, Bar, EntryRow, Bubble, HistoryDrawer, MealEditor, ProfileTab, ProgramsTab, Confetti, Toast, BarcodeScanner, ScanConfirm, SettingsModal, WelcomeModal, lookupBarcode, computeHabits, callAssistant } from "./helpers.jsx";
@@ -290,7 +290,16 @@ export default function App() {
     const text=input.trim();
     if ((!text && !pendingImage)||loading) return;
     const memory = foodMemory(daysRef.current, barcodes, meals.map(m=>({name:m.name,perContainer:mealPerContainer(m)})));
-    const matches = matchingFoods(text, memory);
+    const matches = matchingFoods(text, memory, todayKey());
+    if (!pendingImage && matches.length > 0 && isHistoryLookup(text)) {
+      inputRef.current?.blur();
+      setInput("");
+      setChatMsgs(prev=>[...prev,
+        {role:"user",content:text,actions:[]},
+        {role:"assistant",mode:"food",content:historyReply(matches),actions:[],historyMatches:matches}
+      ]);
+      return;
+    }
     if (skipRepeat !== true && !pendingImage && isRepeatRequest(text) && matches.length) {
       inputRef.current?.blur();
       setRepeatFood({text,day:selDay,matches});
@@ -321,7 +330,7 @@ export default function App() {
     const habits = computeHabits(allDays, workouts);
     const habitsBlock = habits.loggedDayCount>0 ? ` | Habits:${JSON.stringify({avgMacros:habits.avg,frequentFoods:habits.topFoods,daysLogged:habits.loggedDayCount})}` : "";
     const nameBlock = profile.name ? ` | UserName:${profile.name}` : "";
-    const memoryBlock = ` | SavedFoodMatches:${JSON.stringify(matches.map(r=>({...r.entry,portion:r.portion,origin:r.origin})))}`;
+    const memoryBlock = ` | FoodHistorySearch:searched all ${Object.keys(daysRef.current).length} stored days; ${matches.length} matches for this request | SavedFoodMatches:${JSON.stringify(matches.map(r=>({...r.entry,portion:r.portion,origin:r.origin})))}`;
     const ctx=`\n\n[STATE] Date:${selDay}${isToday(selDay)?" (today)":""} | Goals:${JSON.stringify(goals)} | Log(${curEntries.length} items):${JSON.stringify(curEntries.map(e=>({name:e.name,calories:e.calories,protein:e.protein,carbs:e.carbs,fat:e.fat})))} | Totals:${JSON.stringify(curTotals)} | Remaining: cal ${goals.calories-curTotals.calories}, protein ${goals.protein-curTotals.protein}g, carbs ${goals.carbs-curTotals.carbs}g, fat ${goals.fat-curTotals.fat}g | Workouts today:${JSON.stringify(curWk.map(w=>({name:w.name,detail:w.detail})))} | MealLibrary:${JSON.stringify(mealLib)}${profBlock}${nameBlock}${habitsBlock}${memoryBlock}`;
 
     const apiMsgs = chatMsgs.slice(-8).map(m=>({role:m.role,content:m.content}));
@@ -862,7 +871,20 @@ export default function App() {
           {/* Messages scroll area */}
           <div style={{flex:1,overflowY:"auto",padding:"14px 0 8px",
             WebkitOverflowScrolling:"touch"}}>
-            {chatMsgs.map((m,i)=><Bubble key={i} msg={m}/>)}
+            {chatMsgs.map((m,i)=><div key={i}>
+              <Bubble msg={m}/>
+              {m.historyMatches?.length>0 && <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
+                {m.historyMatches.map((r,j)=><button key={j}
+                  onClick={()=>{
+                    const entry=copyFood(r),now=Date.now();
+                    mutEntries(prev=>[...prev,{...entry,id:now+Math.random(),loggedAt:now}]);
+                    setChatMsgs(prev=>[...prev,{role:"assistant",mode:"food",content:`Logged ${entry.name} to ${fmtDate(selDay)} using the recorded portion: ${entry.calories} cal | ${entry.protein}g protein | ${entry.carbs}g carbs | ${entry.fat}g fat.`,actions:[]}]);
+                  }}
+                  style={{background:T.surface,color:T.accent,border:`1px solid ${T.border}`,borderRadius:8,padding:"8px 10px",minHeight:44,fontSize:12,cursor:"pointer"}}>
+                  + {r.entry.name}
+                </button>)}
+              </div>}
+            </div>)}
             {loading&&(
               <div style={{display:"flex",marginBottom:14}}>
                 <div style={{background:T.ai,border:`1px solid ${T.border}`,
