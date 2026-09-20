@@ -1,3 +1,6 @@
+import {VolumeComparison,MuscleInsights} from "./workoutInsights.jsx";
+import {muscleTrends} from "./muscleTrends.js";
+import {requestedMultiplier,scaleSavedPortion} from "./portionReuse.js";
 import { mergeMissingNutrients } from "./nutrientTracking.js";
 import { DIET_FIELDS, number as nutrientNumber } from "./nutrition.js";
 import { foodMemory, matchingFoods, isRepeatRequest, copyFood, isHistoryLookup, historyReply } from "./foodMemory.js";
@@ -13,6 +16,8 @@ export default function App() {
   const [nutrientLoading,setNutrientLoading]=useState(false);
   const [nutrientMessage,setNutrientMessage]=useState("");
   const [repeatFood, setRepeatFood] = useState(null);
+  const [repeatMultiplier,setRepeatMultiplier]=useState("1");
+  const [volumeDetail,setVolumeDetail]=useState(null);
   const [selDay,     setSelDay]     = useState(todayKey());
   const [goals,      setGoals]      = useState({...DEFAULT_GOALS});
   const [activeTab,  setActiveTab]  = useState("chat");
@@ -300,8 +305,9 @@ export default function App() {
       ]);
       return;
     }
-    if (skipRepeat !== true && !pendingImage && isRepeatRequest(text) && matches.length) {
+    if (skipRepeat !== true && !pendingImage && isRepeatRequest(text) && matches.length && (!/\d/.test(text) || requestedMultiplier(text)!==null)) {
       inputRef.current?.blur();
+      setRepeatMultiplier(String(requestedMultiplier(text)??1));
       setRepeatFood({text,day:selDay,matches});
       return;
     }
@@ -330,7 +336,7 @@ export default function App() {
     const habits = computeHabits(allDays, workouts);
     const habitsBlock = habits.loggedDayCount>0 ? ` | Habits:${JSON.stringify({avgMacros:habits.avg,frequentFoods:habits.topFoods,daysLogged:habits.loggedDayCount})}` : "";
     const nameBlock = profile.name ? ` | UserName:${profile.name}` : "";
-    const memoryBlock = ` | FoodHistorySearch:searched all ${Object.keys(daysRef.current).length} stored days; ${matches.length} matches for this request | SavedFoodMatches:${JSON.stringify(matches.map(r=>({...r.entry,portion:r.portion,origin:r.origin})))}`;
+    const memoryBlock = ` | MuscleGroupTrends:${JSON.stringify(muscleTrends(workouts,selDay,settings.muscleGroups||{}).groups)} | FoodHistorySearch:searched all ${Object.keys(daysRef.current).length} stored days; ${matches.length} matches for this request | SavedFoodMatches:${JSON.stringify(matches.map(r=>({...r.entry,portion:r.portion,origin:r.origin})))}`;
     const ctx=`\n\n[STATE] Date:${selDay}${isToday(selDay)?" (today)":""} | Goals:${JSON.stringify(goals)} | Log(${curEntries.length} items):${JSON.stringify(curEntries.map(e=>({name:e.name,calories:e.calories,protein:e.protein,carbs:e.carbs,fat:e.fat})))} | Totals:${JSON.stringify(curTotals)} | Remaining: cal ${goals.calories-curTotals.calories}, protein ${goals.protein-curTotals.protein}g, carbs ${goals.carbs-curTotals.carbs}g, fat ${goals.fat-curTotals.fat}g | Workouts today:${JSON.stringify(curWk.map(w=>({name:w.name,detail:w.detail})))} | MealLibrary:${JSON.stringify(mealLib)}${profBlock}${nameBlock}${habitsBlock}${memoryBlock}`;
 
     const apiMsgs = chatMsgs.slice(-8).map(m=>({role:m.role,content:m.content}));
@@ -1148,6 +1154,7 @@ export default function App() {
       {/* ── Workouts tab ── */}
       {activeTab==="workouts"&&(
         <div style={{flex:1,overflowY:"auto",padding:"12px 14px",WebkitOverflowScrolling:"touch"}}>
+          <MuscleInsights workouts={workouts} today={selDay} settings={settings} onSet={updateSetting} T={T}/>
           {/* Workout streak banner */}
           {(() => {
             const isStd = !!standout[selDay];
@@ -1285,13 +1292,13 @@ export default function App() {
                     {badges.length>0 && (
                       <div style={{display:"flex",flexWrap:"wrap",gap:6,padding:"8px 14px 0"}}>
                         {badges.map((b,bi)=>(
-                          <span key={bi} style={{fontSize:11,fontWeight:700,
+                          <button key={bi} type="button" onClick={()=>{if((b.type==="up"||b.type==="down")&&ex?.comparison)setVolumeDetail({...ex,day:selDay});}} disabled={!(b.type==="up"||b.type==="down")} aria-label={b.type==="up"||b.type==="down"?`Explain ${b.label} for ${ex?.name}`:b.label} style={{fontFamily:"inherit",cursor:b.type==="up"||b.type==="down"?"pointer":"default",fontSize:11,fontWeight:700,
                             color:badgeColor(b.type),
                             background:badgeColor(b.type)+"18",
                             border:`1px solid ${badgeColor(b.type)}44`,
                             borderRadius:99,padding:"3px 9px"}}>
                             {b.emoji} {b.label}
-                          </span>
+                          </button>
                         ))}
                       </div>
                     )}
@@ -1699,23 +1706,27 @@ export default function App() {
       {repeatFood && <div style={{position:"absolute",inset:0,zIndex:550,background:T.overlay,display:"flex",alignItems:"flex-end",padding:"12px 12px max(env(safe-area-inset-bottom),12px)"}}>
         <div role="dialog" aria-modal="true" aria-label="Choose saved food portion" style={{background:T.surface,color:T.text,borderRadius:16,padding:16,width:"100%",maxHeight:"75%",overflowY:"auto"}}>
           <h2 style={{fontSize:20,marginBottom:8}}>Use a saved portion</h2>
-          <p style={{fontSize:14,marginBottom:12}}>For “{repeatFood.text}”, choose the food and portion you mean. These keep the recorded macros exactly; past estimates are not verified labels.</p>
-          {repeatFood.matches.map((r,i)=><button key={i} onClick={()=>{
-            const entry=copyFood(r), now=Date.now();
+          <p style={{fontSize:14,marginBottom:12}}>For “{repeatFood.text}”, choose the food and portion you mean. Choose the saved amount you want to scale. If its size is unknown, confirm it represents your full portion. Past estimates stay estimates.</p>
+          <label style={{display:"block",fontSize:14,marginBottom:12}}>Multiplier of the saved portion
+            <input aria-label="Saved portion multiplier" type="number" min="0.001" step="any" inputMode="decimal" value={repeatMultiplier} onChange={e=>setRepeatMultiplier(e.target.value)} style={{marginLeft:8,width:90,padding:8,fontSize:16,background:T.bg,color:T.text,border:`1px solid ${T.border}`,borderRadius:8}}/>
+          </label>
+          {repeatFood.matches.map((r,i)=>{const scaled=Number(repeatMultiplier)>0 && Number.isFinite(Number(repeatMultiplier))?scaleSavedPortion(r,repeatMultiplier):null;return <button key={i} disabled={!scaled} onClick={()=>{
+            const entry=scaled, now=Date.now();
             mutEntries(prev=>[...prev,{...entry,id:now+Math.random(),loggedAt:now}],repeatFood.day);
-            setChatMsgs(prev=>[...prev,{role:"user",content:repeatFood.text,actions:[]},{role:"assistant",mode:"food",content:`Logged ${entry.name} — ${r.portion}. ${entry.calories} cal | ${entry.protein}g protein | ${entry.carbs}g carbs | ${entry.fat}g fat. Reused ${r.origin.toLowerCase()}.`,actions:[]}]);
+            setChatMsgs(prev=>[...prev,{role:"user",content:repeatFood.text,actions:[]},{role:"assistant",mode:"food",content:`Logged ${entry.name} — ${repeatMultiplier} × ${r.portion}. ${entry.calories} cal | ${entry.protein}g protein | ${entry.carbs}g carbs | ${entry.fat}g fat. Reused ${r.origin.toLowerCase()}.`,actions:[]}]);
             setInput(""); setRepeatFood(null);
           }} style={{display:"block",textAlign:"left",width:"100%",minHeight:44,marginBottom:10,padding:12,borderRadius:12,border:`1px solid ${T.border}`,background:T.bg,color:T.text,cursor:"pointer"}}>
             <strong style={{fontSize:16}}>{r.entry.name}</strong>
             <div style={{fontSize:14,marginTop:5}}>{r.origin} · {r.portion}</div>
-            <div style={{fontSize:14,marginTop:5}}>{r.entry.calories} cal · {r.entry.protein}P · {r.entry.carbs}C · {r.entry.fat}F</div>
-            <div style={{fontSize:14,color:T.accent,marginTop:6}}>Log this exact portion</div>
-          </button>)}
+            <div style={{fontSize:14,marginTop:5}}>{scaled ? `${scaled.calories} cal · ${scaled.protein}P · ${scaled.carbs}C · ${scaled.fat}F` : "Enter a positive multiplier"}</div>
+            <div style={{fontSize:14,color:T.accent,marginTop:6}}>Log {repeatMultiplier} × this saved portion</div>
+          </button>;})}
           <button onClick={()=>{setRepeatFood(null);inputRef.current?.focus();}} style={{minHeight:44,width:"100%",marginBottom:8,background:T.bg,color:T.text,border:`1px solid ${T.border}`,borderRadius:10}}>Change food or amount</button>
           <button onClick={()=>handleSend(true)} style={{minHeight:44,width:"100%",background:T.bg,color:T.text,border:`1px solid ${T.border}`,borderRadius:10}}>Ask AI about this amount instead</button>
         </div>
       </div>}
 
+      {volumeDetail && <VolumeComparison detail={volumeDetail} onClose={()=>setVolumeDetail(null)} T={T}/>}
       {scanning && (
         <BarcodeScanner onDetected={onBarcodeDetected} onClose={()=>setScanning(false)}/>
       )}
