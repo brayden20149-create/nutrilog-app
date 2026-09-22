@@ -11,7 +11,7 @@ import { APP_VERSION } from "./changelog.js";
 import { addDays, dayNum, dowShort, fmtDate, fmtFull, isToday, todayKey, weekDays, weekStart } from "./dates.js";
 import { HAPTICS_ON, haptic, setHapticsOn } from "./haptics.js";
 import { computeHabits, computeStreak, dayHitsGoal, mealPerContainer, sumDay } from "./stats.js";
-import { DEFAULT_GOALS, DEFAULT_PROFILE, DEFAULT_SETTINGS, WATER_STEP, _get, _set, loadAll, loadBarcodes, loadGoals, loadMeals, loadProfile, loadPrograms, loadSettings, loadStandout, loadTheme, loadWater, loadWeights, loadWorkouts, lookupBarcode, saveAll, saveBarcodes, saveGoals, saveMeals, saveProfile, savePrograms, saveSettings, saveStandout, saveTheme, saveWater, saveWeights, saveWorkouts } from "./storage.js";
+import { DEFAULT_GOALS, DEFAULT_PROFILE, DEFAULT_SETTINGS, WATER_STEP, _get, _set, loadAll, loadBarcodes, loadGoals, loadMeals, loadProfile, loadPrograms, loadSettings, loadStandout, loadTheme, loadWater, loadWeights, loadWorkouts, lookupBarcode, onStorageFailure, pack, saveAll, saveBarcodes, saveGoals, saveMeals, saveProfile, savePrograms, saveSettings, saveStandout, saveTheme, saveWater, saveWeights, saveWorkouts, unpack } from "./storage.js";
 import { T, applyTheme } from "./theme.js";
 import { BarcodeScanner } from "./ui/BarcodeScanner.jsx";
 import { Bubble } from "./ui/Bubble.jsx";
@@ -61,6 +61,7 @@ export default function App() {
   const [weights,    setWeights]    = useState({});
   const [water,      setWater]      = useState({});
   const [celebrate,  setCelebrate]  = useState(null); // {text, big} | null
+  const [storageWarn, setStorageWarn] = useState(null); // message when a save fails
   const [loaded,     setLoaded]     = useState(false);
   const [theme,      setTheme]      = useState(null);   // null = default; else theme object
   const [themeVersion, setThemeVersion] = useState(0);  // bump to force re-render after applyTheme
@@ -97,7 +98,7 @@ export default function App() {
     const empty = Object.keys(days).length===0 && mls.length===0 && Object.keys(wks).length===0;
     if (empty) {
       try {
-        const snap = JSON.parse(_get("nl4_snapshot")||"null");
+        const snap = JSON.parse(unpack(_get("nl4_snapshot"))||"null");
         if (snap) {
           if (snap.days)  { days = snap.days;  saveAll(days); }
           if (snap.goals) { gls  = {...DEFAULT_GOALS,...snap.goals}; saveGoals(gls); }
@@ -165,9 +166,16 @@ export default function App() {
   },[]);
 
   useEffect(()=>{
+    onStorageFailure(reason=>setStorageWarn(reason==="full"
+      ? "Storage is full — that change was not saved. Export a backup, then clear old data in Settings."
+      : "This browser is blocking storage, so changes will not be saved."));
+    return ()=>onStorageFailure(null);
+  },[]);
+
+  useEffect(()=>{
     const writeSnapshot = () => {
       try {
-        _set("nl4_snapshot", JSON.stringify({ days:allDays, goals, meals, workouts, profile, weights, water, barcodes, standout, theme, ts:Date.now() }));
+        _set("nl4_snapshot", pack(JSON.stringify({ days:allDays, goals, meals, workouts, profile, weights, water, barcodes, standout, theme, ts:Date.now() })));
       } catch {}
     };
     writeSnapshot();
@@ -1828,6 +1836,10 @@ export default function App() {
         <button aria-label="Dismiss undo" onClick={()=>setFoodUndo(null)} style={{background:"none",border:0,color:T.text,padding:8,minHeight:44,minWidth:44,flexShrink:0,touchAction:"manipulation",cursor:"pointer"}}>×</button>
       </div>}
       {celebrate && <Toast text={celebrate.text}/>}
+      {storageWarn && <div role="alert" style={{position:"absolute",bottom:"calc(env(safe-area-inset-bottom, 0px) + 96px)",left:"50%",transform:"translateX(-50%)",zIndex:570,display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:12,background:T.surface,border:`1px solid ${T.cal}`,color:T.text,boxSizing:"border-box",width:"calc(100% - 28px)",maxWidth:420,fontSize:13,boxShadow:"0 4px 20px #0005"}}>
+        <span style={{flex:1,minWidth:0}}>{storageWarn}</span>
+        <button aria-label="Dismiss storage warning" onClick={()=>setStorageWarn(null)} style={{background:"none",border:0,color:T.text,padding:8,minHeight:44,minWidth:44,flexShrink:0,cursor:"pointer"}}>×</button>
+      </div>}
 
       <HistoryDrawer open={showHist} allDays={allDays} selectedDay={selDay}
         onSelectDay={d=>setSelDay(d)} onClose={()=>setShowHist(false)}

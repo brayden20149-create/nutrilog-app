@@ -1,3 +1,5 @@
+import { unpack } from "./packedValue.js";
+
 export const APP_VERSIONS = ["current", "1.10.0", "1.9.2"];
 export function resolveVersion(value) {
   return APP_VERSIONS.includes(value) ? value : "current";
@@ -8,7 +10,11 @@ export function createVersionStorage(version, storage = window.localStorage) {
   const marker = prefix + "ready";
   if (storage.getItem(marker) !== "1") {
     const keys = Array.from({length:storage.length},(_,i)=>storage.key(i)).filter(k=>k?.startsWith("nl4_"));
-    for (const key of keys) storage.setItem(prefix + key, storage.getItem(key));
+    // Archived builds parse plain JSON, so hand them the uncompressed value.
+    for (const key of keys) {
+      const value = unpack(storage.getItem(key));
+      if (value != null) storage.setItem(prefix + key, value);
+    }
     storage.setItem(marker,"1");
   }
   return {

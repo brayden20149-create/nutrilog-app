@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { DIET_FIELDS } from "../nutrition.js";
+import { storageUsage } from "../storage.js";
 import { T, THEMES } from "../theme.js";
 import { VersionHistoryPanel } from "./VersionHistory.jsx";
 
 export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, onClearData }) => {
   const [showCache, setShowCache] = useState(false);
+  const usage = useMemo(storageUsage, []);
+  const usedPct = Math.round(usage.bytes / usage.limit * 100);
   const Toggle = ({ on, onClick }) => (
     <button onClick={onClick}
       style={{width:46,height:28,borderRadius:99,border:"none",cursor:"pointer",flexShrink:0,
@@ -122,6 +125,23 @@ export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, on
         )}
       </div>
 
+      {/* Storage */}
+      <div style={{marginTop:18,paddingTop:14,borderTop:`1px solid ${T.border}`}}>
+        <div style={{fontSize:10,color:T.muted,letterSpacing:"0.12em",marginBottom:8}}>STORAGE</div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",fontSize:12,marginBottom:6}}>
+          <span style={{color:T.text}}>{(usage.bytes/1024).toFixed(0)} KB used</span>
+          <span style={{color:T.muted}}>{usedPct}% of about 5 MB</span>
+        </div>
+        <div aria-hidden="true" style={{height:5,background:T.border,borderRadius:99,overflow:"hidden"}}>
+          <div style={{height:"100%",width:`${Math.min(usedPct,100)}%`,
+            background:usedPct>85?T.cal:T.accent,borderRadius:99}}/>
+        </div>
+        <div style={{fontSize:11,color:T.muted,marginTop:8,lineHeight:1.4}}>
+          Logs are compressed, so this device holds roughly eight times the history it used to.
+          More saved history means more repeat foods answer from your own log instead of the AI.
+        </div>
+      </div>
+
       {/* Danger zone */}
       <div style={{marginTop:18,paddingTop:14,borderTop:`1px solid ${T.cal}44`}}>
         <div style={{fontSize:10,color:T.cal,letterSpacing:"0.12em",marginBottom:8}}>DANGER ZONE</div>
@@ -194,7 +214,7 @@ export const SettingsModal = ({ current, onApply, onClose, settings, onSet, barc
           padding:"16px 18px 12px",borderBottom:`1px solid ${T.border}`}}>
           <div>
             <div style={{fontSize:10,color:T.accent,letterSpacing:"0.12em"}}>SETTINGS</div>
-            <div style={{fontSize:18,fontWeight:800}}>Appearance</div>
+            <div style={{fontSize:18,fontWeight:800}}>{{general:"General",presets:"Appearance",history:"Version history"}[tab]}</div>
           </div>
           <button onClick={onClose}
             style={{background:"none",border:`1px solid ${T.border}`,color:T.muted,

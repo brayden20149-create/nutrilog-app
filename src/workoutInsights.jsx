@@ -7,16 +7,46 @@ export function VolumeComparison({detail,onClose,T}) {
  const close=useRef(null);
  useEffect(()=>{const previous=document.activeElement;close.current?.focus();const key=e=>{if(e.key==="Escape")onClose();if(e.key==="Tab"){e.preventDefault();close.current?.focus();}};document.addEventListener("keydown",key);return()=>{document.removeEventListener("keydown",key);previous?.focus();};},[]);
  const prev=detail.comparison;
+ const up=detail.volDelta>0;
+ const tone=detail.volDelta===0?T.muted:up?T.accent:T.cal;
+ const peak=Math.max(detail.volume,prev.volume,1);
+ const unreadable=[...detail.sets,...prev.sets].some(s=>!s.parsed);
+ const session=(label,day,sets,volume,bar)=><div style={{padding:"12px 0",borderTop:`1px solid ${T.border}`}}>
+  <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:8}}>
+   <span style={{fontSize:10,letterSpacing:".07em",color:T.muted}}>{label}</span>
+   <span style={{fontSize:11,color:T.muted}}>{day}</span>
+  </div>
+  <div style={{display:"flex",alignItems:"baseline",gap:5,margin:"5px 0 7px"}}>
+   <strong style={{fontSize:21,color:bar}}>{volume.toLocaleString()}</strong>
+   <span style={{fontSize:11,color:T.muted}}>lb·reps</span>
+  </div>
+  <div aria-hidden="true" style={{height:5,background:T.border,borderRadius:99,overflow:"hidden"}}>
+   <div style={{height:"100%",width:`${volume/peak*100}%`,background:bar,borderRadius:99}}/>
+  </div>
+  <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:9}}>
+   {sets.map((s,j)=><span key={j} style={{fontSize:11,padding:"4px 8px",borderRadius:7,background:T.card,color:s.parsed?T.text:T.muted,opacity:s.parsed?1:.55}}>
+    {s.detail||"—"}{s.parsed&&<span style={{color:T.muted}}> · {s.parsed.volume.toLocaleString()}</span>}
+   </span>)}
+  </div>
+ </div>;
  return createPortal(<div onTouchStart={e=>e.stopPropagation()} onTouchEnd={e=>e.stopPropagation()} onClick={onClose} style={{position:"fixed",inset:0,zIndex:10000,fontFamily:"-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif",background:T.overlay,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
  <div role="dialog" aria-modal="true" aria-label="Workout volume comparison" onClick={e=>e.stopPropagation()} style={{background:T.surface,color:T.text,border:`1px solid ${T.border}`,borderRadius:14,padding:16,width:"100%",maxWidth:360,maxHeight:"75dvh",overflowY:"auto"}}>
- <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}><strong>{detail.name} · {detail.volDelta>0?"+":""}{detail.volDelta}%</strong><button ref={close} aria-label="Close comparison" onClick={onClose} style={{background:"none",border:0,color:T.text,minHeight:44,minWidth:44,fontSize:18}}>×</button></div>
- {[[detail.day,detail.name,detail.sets,detail.volume],[prev.day,prev.name,prev.sets,prev.volume]].map(([day,name,sets,volume],i)=><div key={i} style={{padding:"10px 0",borderTop:`1px solid ${T.border}`}}>
- <div style={{fontSize:13,color:T.accent}}>{i?"Previous matching session":"Selected session"} · {day}</div>
- <div style={{fontSize:13,margin:"4px 0"}}>{name} · {volume.toLocaleString()} lb·reps</div>
- {sets.map((s,j)=><div key={j} style={{fontSize:13,color:T.muted}}>Set {j+1}: {s.detail}{s.parsed ? ` = ${s.parsed.volume.toLocaleString()}`:" · excluded from volume (unreadable)"}</div>)}
- </div>)}
- <p style={{fontSize:12,lineHeight:1.5}}>Volume = sum of weight × reps as logged. ({detail.volume.toLocaleString()} − {prev.volume.toLocaleString()}) ÷ {prev.volume.toLocaleString()} × 100 = {detail.volDelta}%.</p>
- <p style={{fontSize:12,lineHeight:1.5,color:T.muted,marginTop:8}}>Compared with the most recent earlier session with a matching exercise name. An unfinished session or different set count can lower this number; it is not a strength-loss score.</p>
+ <div style={{display:"flex",alignItems:"center",gap:8}}>
+  <div style={{flex:1,minWidth:0}}>
+   <div style={{fontSize:15,fontWeight:700,overflowWrap:"anywhere"}}>{detail.name}</div>
+   <div style={{fontSize:11,color:T.muted,marginTop:2}}>volume vs {prev.day}</div>
+  </div>
+  <span style={{fontSize:17,fontWeight:800,color:tone,background:`${tone}1a`,border:`1px solid ${tone}44`,borderRadius:9,padding:"5px 9px",whiteSpace:"nowrap"}}>{up?"+":""}{detail.volDelta}%</span>
+  <button ref={close} aria-label="Close comparison" onClick={onClose} style={{background:"none",border:0,color:T.muted,minHeight:44,minWidth:36,fontSize:20}}>×</button>
+ </div>
+ {session("THIS SESSION",detail.day,detail.sets,detail.volume,tone)}
+ {session("PREVIOUS",prev.day,prev.sets,prev.volume,T.muted)}
+ {unreadable&&<p style={{fontSize:11,color:T.muted,marginTop:2}}>Faded sets could not be read and are excluded from volume.</p>}
+ <details style={{marginTop:10,borderTop:`1px solid ${T.border}`,paddingTop:8}}>
+  <summary style={{fontSize:12,color:T.muted,cursor:"pointer",padding:"4px 0"}}>How this is calculated</summary>
+  <p style={{fontSize:12,lineHeight:1.5,marginTop:6}}>Volume is the sum of weight × reps as logged. ({detail.volume.toLocaleString()} − {prev.volume.toLocaleString()}) ÷ {prev.volume.toLocaleString()} × 100 = {detail.volDelta}%.</p>
+  <p style={{fontSize:12,lineHeight:1.5,color:T.muted,marginTop:8}}>Compared with the most recent earlier session with a matching exercise name. An unfinished session or a different set count can lower this number; it is not a strength-loss score.</p>
+ </details>
  </div></div>,document.body);
 }
 
@@ -86,7 +116,13 @@ export function MuscleInsights({workouts,today,settings,onSet,T}) {
  </div>
  </div>
  {view && <InsightPopup title={view.type==="group"?view.group:view.type==="days"?"Workout days":view.type==="edit"?"Exercise groups":"About these trends"} onClose={()=>setView(null)} T={T}>
- {view.type==="info" && <p style={{fontSize:13,lineHeight:1.6,color:T.muted}}>Last 14 days versus the previous 14, through {today}. Bars show relative logged sets; percentages show set-count changes. These rank logged activity, not growth or workout quality. Today may be incomplete. Each row counts as one set, assigned to one estimated primary muscle group.</p>}
+ {view.type==="info" && <>
+ {[["Window",`Last 14 days vs the previous 14, through ${today}`],["Bars","Logged sets, relative to your top group"],["Percentages","Change in set count between the two windows"],["Each row","One set, assigned to one estimated primary muscle group"]].map(([k,v])=><div key={k} style={{display:"flex",gap:10,padding:"7px 0",borderBottom:`1px solid ${T.border}`}}>
+  <span style={{fontSize:12,color:T.accent,width:88,flexShrink:0}}>{k}</span>
+  <span style={{fontSize:12,lineHeight:1.45}}>{v}</span>
+ </div>)}
+ <p style={{fontSize:11,lineHeight:1.5,color:T.muted,marginTop:10}}>This ranks logged activity — not growth, strength or workout quality. Today may still be incomplete.</p>
+ </>}
  {view.type==="group" && <>
  <div style={{display:"flex",gap:6,marginBottom:12}}><span style={chip}>{group?.sets??0} sets now</span><span style={chip}>{group?.previousSets??0} earlier</span><span style={chip}>{group?.days??0} days</span></div>
  {!exercise ? <>

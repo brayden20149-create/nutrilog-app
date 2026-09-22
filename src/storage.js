@@ -1,22 +1,52 @@
+import { pack, unpack } from "./packedValue.js";
 import { barcodeNutrition } from "./nutrition.js";
 
+export { pack, unpack };
+
+// A full quota used to fail silently, losing the save with no sign to the user.
+let onFailure = null;
+export const onStorageFailure = (fn) => { onFailure = fn; };
+
 export const _get = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
-export const _set = (k,v) => { try { localStorage.setItem(k,v); } catch {} };
+export const _set = (k,v) => {
+  try { localStorage.setItem(k,v); return true; }
+  catch (e) {
+    const full = e?.name === "QuotaExceededError" || e?.code === 22 || e?.code === 1014;
+    onFailure?.(full ? "full" : "blocked");
+    return false;
+  }
+};
 
 export const dualSave = (key, valueStr) => {
-  _set(key, valueStr);
-  _set(key + "_bak", valueStr);
+  const packed = pack(valueStr);
+  if (!_set(key, packed)) return false;
+  _set(key + "_bak", packed);
   _set(key + "_ts", String(Date.now()));
+  return true;
 };
 export const dualLoadRaw = (key) => {
-  const p = _get(key);
+  const p = unpack(_get(key));
   if (p && p !== "{}" && p !== "[]") return p;
-  const b = _get(key + "_bak");
+  const b = unpack(_get(key + "_bak"));
   if (b && b !== "{}" && b !== "[]") {
-    _set(key, b);
+    _set(key, pack(b));
     return b;
   }
   return p || b || null;
+};
+
+// Bytes are UTF-16 code units x2, matching how browsers charge the quota.
+export const storageUsage = () => {
+  let bytes = 0, entries = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k) continue;
+      bytes += (k.length + (localStorage.getItem(k)?.length || 0)) * 2;
+      entries++;
+    }
+  } catch {}
+  return { bytes, entries, limit: 5 * 1024 * 1024 };
 };
 
 export const loadAll   = () => { try { return JSON.parse(dualLoadRaw("nl4_days")||"{}"); }  catch { return {}; } };

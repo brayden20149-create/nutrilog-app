@@ -1,6 +1,13 @@
-export const APP_VERSION = "1.10.5";
+export const APP_VERSION = "2.0.0";
 
 export const CHANGELOG = [
+ {version:"2.0.0",date:"Sep 22, 2026",notes:[
+  {text:"Halloween theme — pumpkin orange and purple, in Settings → Appearance",action:"settings"},
+  {text:"Workout comparison popups redesigned: volume bars and set chips instead of paragraphs",action:"workouts"},
+  {text:"Room for far more food history, so repeat foods come from your own log instead of the AI",action:"log"},
+  {text:"Storage now warns you when it is full instead of silently dropping a save",action:"settings"},
+  {text:"Fixed edge swipe between tabs and the Try buttons in What's New, which both crashed"},
+ ]},
  {version:"1.10.5",date:"Sep 20, 2026",notes:[
   {text:"Equivalent exercise wording shares one history; original sets stay intact",action:"workouts"},
   {text:"Link other names under Groups → Combine exercise names",action:"workouts"},

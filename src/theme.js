@@ -22,6 +22,8 @@ export const THEMES = [
     border:"#42232d", text:"#fae9ef", muted:"#a86d7e", accent:"#fb7185", accent2:"#f472b6" },
   { id:"mono", name:"Slate", bg:"#0c0d0f", surface:"#15171a", card:"#1c1f23",
     border:"#2a2e34", text:"#eef1f5", muted:"#6b727d", accent:"#94a3b8", accent2:"#cbd5e1" },
+  { id:"halloween", name:"Halloween 🎃", bg:"#0b0710", surface:"#16101f", card:"#1e1529",
+    border:"#33203f", text:"#f7ecf7", muted:"#8a6f96", accent:"#ff7518", accent2:"#a855f7" },
 ];
 
 export const applyTheme = (t) => {
