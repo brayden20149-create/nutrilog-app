@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
 import {requestedMultiplier,scaleSavedPortion} from '../src/portionReuse.js';
 import {muscleGroup,muscleTrends} from '../src/muscleTrends.js';
+import {analyzeWorkoutDay} from '../src/workoutAnalysis.js';
 test('three fifths of the screenshot saved portion scales all nutrients',()=>{
  const base={name:"Casey's Popcorn Chicken",calories:450,protein:28,carbs:32,fat:24,fiber:5,id:9};
  const factor=requestedMultiplier("log 3/5 casey’s popcorn chicken");
@@ -27,13 +27,9 @@ test('trends count equal windows, exclude future days and cardio, and rank sets'
  assert.equal(b.sets,2);assert.equal(b.previousSets,1);assert.equal(b.delta,100);assert.equal(b.days,1);
  assert.equal(r.days[0].sets,3);
 });
-// Execute the actual pure workout analysis from helpers without loading JSX/React.
-const src=readFileSync(new URL('../src/helpers.jsx',import.meta.url),'utf8');
-const code=src.slice(src.indexOf('export const parseSet'),src.indexOf('export const computeStreak')).replace(/export /g,'');
-const analyze=new Function(code+';return analyzeWorkoutDay;')();
 test('volume popup retains exact latest baseline date, sets and arithmetic',()=>{
  const rows=(weight,reps)=>[{name:"Dumbbell Curl",detail:weight+" lbs × "+reps}];
- const r=analyze({"2026-09-01":rows(20,10),"2026-09-19":rows(100,45),"2026-09-20":[...rows(40,10),...rows(45,10),...rows(50,9)]},"2026-09-20").exercises[0];
+ const r=analyzeWorkoutDay({"2026-09-01":rows(20,10),"2026-09-19":rows(100,45),"2026-09-20":[...rows(40,10),...rows(45,10),...rows(50,9)]},"2026-09-20").exercises[0];
  assert.equal(r.volume,1300);assert.equal(r.comparison.volume,4500);
  assert.equal(r.comparison.day,"2026-09-19");assert.equal(r.volDelta,-71);
  assert.equal(r.comparison.sets.length,1);

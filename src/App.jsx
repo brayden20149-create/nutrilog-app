@@ -6,7 +6,27 @@ import { DIET_FIELDS, number as nutrientNumber } from "./nutrition.js";
 import { foodMemory, matchingFoods, isRepeatRequest, copyFood, isHistoryLookup, historyReply } from "./foodMemory.js";
 import { undoFoodChange } from "./nutrition.js";
 import { useState, useEffect, useRef } from "react";
-import { APP_VERSION, ExtraNutrients, findMissingNutrients, DietProjection, T, applyTheme, loadTheme, saveTheme, DEFAULT_SETTINGS, loadSettings, saveSettings, toDisplayWeight, fromDisplayWeight, weightUnit, toDisplayWater, waterUnit, DEFAULT_GOALS, todayKey, isToday, fmtDate, fmtFull, _get, _set, loadAll, saveAll, loadGoals, saveGoals, loadMeals, saveMeals, loadPrograms, savePrograms, cleanWorkoutDay, loadWorkouts, saveWorkouts, loadStandout, saveStandout, loadWeights, saveWeights, loadWater, saveWater, WATER_STEP, loadBarcodes, saveBarcodes, HAPTICS_ON, haptic, setHapticsOn, DEFAULT_PROFILE, loadProfile, saveProfile, weekStart, addDays, weekDays, dowShort, dayNum, dayHitsGoal, sumDay, analyzeWorkoutDay, normName, computeStreak, mealPerContainer, InfoDot, Ring, Bar, EntryRow, Bubble, HistoryDrawer, MealEditor, ProfileTab, ProgramsTab, Confetti, Toast, BarcodeScanner, ScanConfirm, SettingsModal, WelcomeModal, lookupBarcode, computeHabits, callAssistant } from "./helpers.jsx";
+import { callAssistant, findMissingNutrients } from "./assistant.js";
+import { APP_VERSION } from "./changelog.js";
+import { addDays, dayNum, dowShort, fmtDate, fmtFull, isToday, todayKey, weekDays, weekStart } from "./dates.js";
+import { HAPTICS_ON, haptic, setHapticsOn } from "./haptics.js";
+import { computeHabits, computeStreak, dayHitsGoal, mealPerContainer, sumDay } from "./stats.js";
+import { DEFAULT_GOALS, DEFAULT_PROFILE, DEFAULT_SETTINGS, WATER_STEP, _get, _set, loadAll, loadBarcodes, loadGoals, loadMeals, loadProfile, loadPrograms, loadSettings, loadStandout, loadTheme, loadWater, loadWeights, loadWorkouts, lookupBarcode, saveAll, saveBarcodes, saveGoals, saveMeals, saveProfile, savePrograms, saveSettings, saveStandout, saveTheme, saveWater, saveWeights, saveWorkouts } from "./storage.js";
+import { T, applyTheme } from "./theme.js";
+import { BarcodeScanner } from "./ui/BarcodeScanner.jsx";
+import { Bubble } from "./ui/Bubble.jsx";
+import { DietProjection, ExtraNutrients } from "./ui/DietViews.jsx";
+import { EntryRow } from "./ui/EntryRow.jsx";
+import { HistoryDrawer } from "./ui/HistoryDrawer.jsx";
+import { MealEditor } from "./ui/MealEditor.jsx";
+import { Bar, Confetti, InfoDot, Ring, Toast } from "./ui/primitives.jsx";
+import { ProfileTab } from "./ui/ProfileTab.jsx";
+import { ProgramsTab } from "./ui/ProgramsTab.jsx";
+import { ScanConfirm } from "./ui/ScanConfirm.jsx";
+import { SettingsModal } from "./ui/SettingsModal.jsx";
+import { WelcomeModal } from "./ui/VersionHistory.jsx";
+import { fromDisplayWeight, toDisplayWater, toDisplayWeight, waterUnit, weightUnit } from "./units.js";
+import { analyzeWorkoutDay, cleanWorkoutDay, normName } from "./workoutAnalysis.js";
 
 export default function App() {
   const [allDays,    setAllDays]    = useState({});
@@ -617,7 +637,7 @@ export default function App() {
 
   const runFeatureAction = (action) => {
     if (!action) return;
-    setShowWelcome(false); setShowVersions(false); setShowSettings(false); setShowHist(false);
+    setShowWelcome(false); setShowSettings(false); setShowHist(false);
     switch (action) {
       case "chat":    setActiveTab("chat"); break;
       case "log":     setActiveTab("log"); break;
@@ -680,7 +700,7 @@ export default function App() {
   const onAppTouchEnd = (e)=>{
     if (!edgeSwipe.current.fromEdge) return;
     edgeSwipe.current.fromEdge=false;
-    if (showHist || scanning || scanConfirm || customWater!==null || showWelcome || showVersions) return;
+    if (showHist || scanning || scanConfirm || customWater!==null || showWelcome) return;
     const t=e.changedTouches[0];
     const dx=t.clientX-edgeSwipe.current.x, dy=t.clientY-edgeSwipe.current.y;
     if (Math.abs(dx)<80 || Math.abs(dx) < Math.abs(dy)*2) return;
