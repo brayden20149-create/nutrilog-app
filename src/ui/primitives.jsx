@@ -74,7 +74,49 @@ export const Bar = ({label,value,max,color,unit="g"}) => {
   );
 };
 
-export const Confetti = ({ big }) => {
+// Halloween swaps the falling paper for a swarm of bats: each one drifts
+// sideways as it crosses the screen while its wings flap.
+const Bats = ({ big }) => {
+  const count = big ? 26 : 12;
+  const bats = Array.from({length:count}).map((_,i)=>{
+    const left = Math.random()*100;
+    const drift = (Math.random()*44 - 22).toFixed(0);
+    const delay = Math.random()*0.5;
+    const dur = 2.4 + Math.random()*1.6;
+    const size = 16 + Math.random()*16;
+    return (
+      <div key={i} style={{position:"absolute",top:"-8vh",left:`${left}%`,
+        animation:`nlBatFly ${dur}s ${delay}s cubic-bezier(.35,.1,.6,1) forwards`,
+        // consumed by the keyframes as the horizontal drift for this bat
+        "--nl-bat-drift":`${drift}vw`}}>
+        <span style={{display:"block",fontSize:size,lineHeight:1,
+          animation:`nlBatFlap ${0.22 + Math.random()*0.16}s ease-in-out infinite`}}>🦇</span>
+      </div>
+    );
+  });
+  return (
+    <>
+      <style>{`
+        @keyframes nlBatFly {
+          0%   { transform: translate3d(0,0,0) rotate(-10deg); opacity:0; }
+          12%  { opacity:1; }
+          88%  { opacity:1; }
+          100% { transform: translate3d(var(--nl-bat-drift,0), 118vh, 0) rotate(14deg); opacity:0; }
+        }
+        @keyframes nlBatFlap { 0%,100% { transform: scaleX(1); } 50% { transform: scaleX(.5); } }
+        @media (prefers-reduced-motion: reduce) {
+          [style*="nlBatFly"], [style*="nlBatFlap"] { animation-duration: .01ms !important; }
+        }
+      `}</style>
+      <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:500,overflow:"hidden"}}>
+        {bats}
+      </div>
+    </>
+  );
+};
+
+export const Confetti = ({ big, variant }) => {
+  if (variant === "bats") return <Bats big={big}/>;
   const colors = [T.accent, T.carbs, T.fat, T.info, "#a3e635", "#f472b6"];
   const count = big ? 80 : 28;
   const pieces = Array.from({length:count}).map((_,i)=>{

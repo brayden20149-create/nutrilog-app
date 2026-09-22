@@ -56,6 +56,14 @@ export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, on
         <Seg value={settings.glow} options={[["off","Off"],["subtle","Subtle"],["vivid","Vivid"]]}
           onPick={v=>onSet("glow",v)}/>
       </Row>
+      {settings.glow !== "off" && (
+        <Row label="Glow width" sub={`Thickness of the border light — ${settings.glowWidth ?? 2}px`}>
+          <input type="range" min="1" max="10" step="1" value={settings.glowWidth ?? 2}
+            aria-label="Glow width in pixels"
+            onChange={e=>onSet("glowWidth", +e.target.value)}
+            style={{width:120,accentColor:T.accent,flexShrink:0}}/>
+        </Row>
+      )}
       <Row label="Default tab" sub="Which tab opens on launch">
         <Seg value={settings.landingTab}
           options={[["chat","💬"],["log","📋"],["workouts","💪"],["train","🏋️"]]}

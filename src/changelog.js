@@ -1,6 +1,12 @@
-export const APP_VERSION = "2.0.0";
+export const APP_VERSION = "2.1.0";
 
 export const CHANGELOG = [
+ {version:"2.1.0",date:"Sep 22, 2026",notes:[
+  {text:"Days now step with ‹ and › arrows — tap the date to jump back to today",action:"log"},
+  {text:"Glow width is adjustable from 1 to 10 px in Settings",action:"settings"},
+  {text:"Halloween theme scatters pumpkins around the screen",action:"settings"},
+  {text:"Halloween celebrations send a swarm of bats instead of confetti",action:"settings"},
+ ]},
  {version:"2.0.0",date:"Sep 22, 2026",notes:[
   {text:"Lifetime stats in Settings → Stats: every carb ever counted, goals hit, streaks and your recent pace versus all time",action:"settings"},
   {text:"A line of light drifts around the screen edge — Subtle, Vivid or off in Settings",action:"settings"},

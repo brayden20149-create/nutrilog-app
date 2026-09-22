@@ -21,6 +21,7 @@ import { GlowBorder } from "./ui/GlowBorder.jsx";
 import { HistoryDrawer } from "./ui/HistoryDrawer.jsx";
 import { MealEditor } from "./ui/MealEditor.jsx";
 import { Bar, Confetti, InfoDot, Ring, Toast } from "./ui/primitives.jsx";
+import { Pumpkins } from "./ui/Pumpkins.jsx";
 import { ProfileTab } from "./ui/ProfileTab.jsx";
 import { ProgramsTab } from "./ui/ProgramsTab.jsx";
 import { ScanConfirm } from "./ui/ScanConfirm.jsx";
@@ -248,9 +249,15 @@ export default function App() {
     fat:goals.fat-totals.fat,
   };
 
-  const loggedDays = Object.keys(allDays)
-    .filter(d=>allDays[d]?.length>0)
-    .sort((a,b)=>b.localeCompare(a));
+  const isHalloween = theme?.id === "halloween";
+
+  const dayArrowStyle = (dim) => ({
+    background:T.surface, border:`1px solid ${T.border}`, color:dim?T.muted:T.text,
+    borderRadius:12, minWidth:44, minHeight:44, fontSize:22, lineHeight:1,
+    display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0,
+    opacity:dim?0.35:1, cursor:dim?"default":"pointer",
+    fontFamily:"inherit", WebkitTapHighlightColor:"transparent",
+  });
 
   const applyActions = (actions, curGoals, curEntries, curWorkouts) => {
     let gl={...curGoals}, es=[...curEntries], wk=[...(curWorkouts||[])];
@@ -846,39 +853,28 @@ export default function App() {
 
       {/* ── Day selector ── */}
       <div style={{flexShrink:0,padding:"10px 14px 0",background:T.bg}}>
-        {/* Always-visible current date */}
-        <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:8}}>
-          <span style={{fontSize:15,fontWeight:800,color:isToday(selDay)?T.accent:T.text}}>
-            {isToday(selDay)?"Today":fmtDate(selDay)}
-          </span>
-          <span style={{fontSize:12,color:T.muted}}>{fmtFull(selDay)}</span>
+        {/* ‹ date › — step a day at a time; tap the date to jump back to today */}
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <button aria-label="Previous day"
+            onClick={()=>{ haptic(8); setSelDay(addDays(selDay,-1)); }}
+            style={dayArrowStyle(false)}>‹</button>
+          <button
+            onClick={()=>{ if(!isToday(selDay)){ haptic(8); setSelDay(todayKey()); } }}
+            aria-label={isToday(selDay)?fmtFull(selDay):`${fmtFull(selDay)} — go back to today`}
+            style={{flex:1,minWidth:0,background:"none",border:0,padding:"2px 0",
+              cursor:isToday(selDay)?"default":"pointer",textAlign:"center",
+              fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
+            <div style={{fontSize:15,fontWeight:800,color:isToday(selDay)?T.accent:T.text}}>
+              {isToday(selDay)?"Today":fmtDate(selDay)}
+            </div>
+            <div style={{fontSize:12,color:T.muted,marginTop:1,whiteSpace:"nowrap",
+              overflow:"hidden",textOverflow:"ellipsis"}}>{fmtFull(selDay)}</div>
+          </button>
+          {/* Nothing to log in the future, so today is the forward limit. */}
+          <button aria-label="Next day" disabled={isToday(selDay)}
+            onClick={()=>{ haptic(8); setSelDay(addDays(selDay,1)); }}
+            style={dayArrowStyle(isToday(selDay))}>›</button>
         </div>
-        {loggedDays.filter(d=>d!==todayKey()).length>0 && (
-          <div style={{display:"flex",gap:7,overflowX:"auto",paddingBottom:4,
-            scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
-            {!isToday(selDay) && (
-              <button onClick={()=>setSelDay(todayKey())}
-                style={{background:T.surface,color:T.muted,
-                  border:`1px solid ${T.border}`,
-                  borderRadius:22,padding:"8px 16px",cursor:"pointer",
-                  fontSize:13,whiteSpace:"nowrap",fontWeight:400,
-                  minHeight:38,WebkitTapHighlightColor:"transparent",flexShrink:0}}>
-                Today
-              </button>
-            )}
-            {loggedDays.filter(d=>d!==todayKey()).slice(0,6).map(d=>(
-              <button key={d} onClick={()=>setSelDay(d)}
-                style={{background:selDay===d?T.accent:T.surface,
-                  color:selDay===d?"#0b0f0b":T.muted,
-                  border:`1px solid ${selDay===d?T.accent:T.border}`,
-                  borderRadius:22,padding:"8px 16px",cursor:"pointer",
-                  fontSize:13,whiteSpace:"nowrap",fontWeight:selDay===d?700:400,
-                  minHeight:38,WebkitTapHighlightColor:"transparent",flexShrink:0}}>
-                {fmtDate(d)}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* ── Tab bar ── */}
@@ -1832,8 +1828,9 @@ export default function App() {
           onTry={(a)=>{ try{ _set("nl4_seen_version", APP_VERSION); }catch{} runFeatureAction(a); }}
           onClose={()=>{ setShowWelcome(false); try{ _set("nl4_seen_version", APP_VERSION); }catch{} }}/>
       )}
-      <GlowBorder intensity={settings.glow}/>
-      {celebrate && <Confetti big={celebrate.big}/>}
+      <GlowBorder intensity={settings.glow} width={settings.glowWidth}/>
+      {isHalloween && <Pumpkins/>}
+      {celebrate && <Confetti big={celebrate.big} variant={isHalloween?"bats":undefined}/>}
       {foodUndo && !repeatFood && !editMeal && <div role="status" style={{position:"absolute",bottom:"calc(env(safe-area-inset-bottom, 0px) + 96px)",left:"50%",transform:"translateX(-50%)",zIndex:560,display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:12,background:T.surface,border:`1px solid ${T.accent}`,color:T.text,boxSizing:"border-box",width:"calc(100% - 28px)",maxWidth:420,fontSize:14,boxShadow:"0 4px 20px #0005"}}>
         <span style={{flex:1,minWidth:0}}>Food log updated · {fmtDate(foodUndo.day)}</span>
         <button onClick={undoFood} style={{background:T.accent,color:T.bg,border:0,borderRadius:8,padding:"10px",minHeight:44,minWidth:64,flexShrink:0,touchAction:"manipulation",fontSize:14,cursor:"pointer"}}>Undo</button>

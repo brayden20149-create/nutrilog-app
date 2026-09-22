@@ -97,6 +97,7 @@ export const DEFAULT_SETTINGS = {
   landingTab:"chat",    // chat | log | workouts | train
   aiStyle:"balanced",   // concise | balanced | detailed
   glow:"subtle",        // off | subtle | vivid — travelling light around the screen edge
+  glowWidth:2,          // ring thickness in px (1-10)
   webSearch:true,       // let the AI search the web for restaurant/brand nutrition data
 };
 export const loadSettings = () => { try { return {...DEFAULT_SETTINGS, ...JSON.parse(dualLoadRaw("nl4_settings")||"{}")}; } catch { return {...DEFAULT_SETTINGS}; } };

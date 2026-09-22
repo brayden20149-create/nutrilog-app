@@ -9,10 +9,13 @@ const LEVELS = {
 // A light that travels around the screen edge. The ring is a full-viewport box
 // masked to just its padding, so a single large spinning gradient underneath
 // reads as one line of light chasing the border.
-export const GlowBorder = ({ intensity = "subtle" }) => {
+export const GlowBorder = ({ intensity = "subtle", width }) => {
   const level = LEVELS[intensity];
   if (!level) return null;
-  const { thickness, seconds, opacity, tail } = level;
+  const { seconds, opacity, tail } = level;
+  // An explicit width overrides the preset thickness; clamped so the ring can
+  // never grow wide enough to crowd the content it frames.
+  const thickness = Number.isFinite(+width) ? Math.min(Math.max(+width, 1), 10) : level.thickness;
   const ring = "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)";
 
   return (
