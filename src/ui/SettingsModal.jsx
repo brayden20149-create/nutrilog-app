@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { DIET_FIELDS } from "../nutrition.js";
 import { storageUsage } from "../storage.js";
 import { T, THEMES } from "../theme.js";
+import { LifetimeStats } from "./LifetimeStats.jsx";
 import { VersionHistoryPanel } from "./VersionHistory.jsx";
 
 export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, onClearData }) => {
@@ -50,6 +51,10 @@ export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, on
       </Row>
       <Row label="Celebrations" sub="Confetti & cheer toasts when you hit goals">
         <Toggle on={settings.celebrations} onClick={()=>onSet("celebrations",!settings.celebrations)}/>
+      </Row>
+      <Row label="Edge glow" sub="A line of light that drifts around the screen">
+        <Seg value={settings.glow} options={[["off","Off"],["subtle","Subtle"],["vivid","Vivid"]]}
+          onPick={v=>onSet("glow",v)}/>
       </Row>
       <Row label="Default tab" sub="Which tab opens on launch">
         <Seg value={settings.landingTab}
@@ -160,7 +165,7 @@ export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, on
   );
 };
 
-export const SettingsModal = ({ current, onApply, onClose, settings, onSet, barcodes, onDeleteBarcode, onClearData, onTry }) => {
+export const SettingsModal = ({ current, onApply, onClose, settings, onSet, barcodes, onDeleteBarcode, onClearData, onTry, allDays, workouts, goals, water, today }) => {
   const base = current || THEMES[0];
   const [custom, setCustom] = useState({
     bg: base.bg, surface: base.surface, card: base.card, border: base.border,
@@ -214,7 +219,7 @@ export const SettingsModal = ({ current, onApply, onClose, settings, onSet, barc
           padding:"16px 18px 12px",borderBottom:`1px solid ${T.border}`}}>
           <div>
             <div style={{fontSize:10,color:T.accent,letterSpacing:"0.12em"}}>SETTINGS</div>
-            <div style={{fontSize:18,fontWeight:800}}>{{general:"General",presets:"Appearance",history:"Version history"}[tab]}</div>
+            <div style={{fontSize:18,fontWeight:800}}>{{general:"General",presets:"Appearance",stats:"Your lifetime stats",history:"Version history"}[tab]}</div>
           </div>
           <button onClick={onClose}
             style={{background:"none",border:`1px solid ${T.border}`,color:T.muted,
@@ -223,11 +228,11 @@ export const SettingsModal = ({ current, onApply, onClose, settings, onSet, barc
         </div>
         {/* Tab switch */}
         <div style={{display:"flex",gap:6,padding:"12px 14px 0"}}>
-          {[["general","General"],["presets","Appearance"],["history","History"]].map(([id,lbl])=>(
+          {[["general","General"],["presets","Look"],["stats","Stats"],["history","History"]].map(([id,lbl])=>(
             <button key={id} onClick={()=>setTab(id)}
               style={{flex:1,background:tab===id?T.gAccent:T.card,
                 color:tab===id?"#0b0f0b":T.text,border:`1px solid ${T.border}`,
-                borderRadius:10,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer",
+                borderRadius:10,padding:"9px 4px",fontSize:12,fontWeight:700,cursor:"pointer",
                 minHeight:40,WebkitTapHighlightColor:"transparent"}}>{lbl}</button>
           ))}
         </div>
@@ -235,6 +240,8 @@ export const SettingsModal = ({ current, onApply, onClose, settings, onSet, barc
           {tab==="general" ? (
             <GeneralSettings settings={settings} onSet={onSet} barcodes={barcodes}
               onDeleteBarcode={onDeleteBarcode} onClearData={onClearData}/>
+          ) : tab==="stats" ? (
+            <LifetimeStats days={allDays} workouts={workouts} goals={goals} water={water} today={today}/>
           ) : tab==="presets" ? (
             <>
               {THEMES.map(t=><Swatch key={t.id} t={t}/>)}

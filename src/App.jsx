@@ -17,6 +17,7 @@ import { BarcodeScanner } from "./ui/BarcodeScanner.jsx";
 import { Bubble } from "./ui/Bubble.jsx";
 import { DietProjection, ExtraNutrients } from "./ui/DietViews.jsx";
 import { EntryRow } from "./ui/EntryRow.jsx";
+import { GlowBorder } from "./ui/GlowBorder.jsx";
 import { HistoryDrawer } from "./ui/HistoryDrawer.jsx";
 import { MealEditor } from "./ui/MealEditor.jsx";
 import { Bar, Confetti, InfoDot, Ring, Toast } from "./ui/primitives.jsx";
@@ -1822,6 +1823,7 @@ export default function App() {
           settings={settings} onSet={updateSetting}
           barcodes={barcodes} onDeleteBarcode={handleDeleteBarcode}
           onClearData={handleClearData}
+          allDays={allDays} workouts={workouts} goals={goals} water={water} today={todayKey()}
           onTry={runFeatureAction}/>
       )}
       {showWelcome && (
@@ -1829,6 +1831,7 @@ export default function App() {
           onTry={(a)=>{ try{ _set("nl4_seen_version", APP_VERSION); }catch{} runFeatureAction(a); }}
           onClose={()=>{ setShowWelcome(false); try{ _set("nl4_seen_version", APP_VERSION); }catch{} }}/>
       )}
+      <GlowBorder intensity={settings.glow}/>
       {celebrate && <Confetti big={celebrate.big}/>}
       {foodUndo && !repeatFood && !editMeal && <div role="status" style={{position:"absolute",bottom:"calc(env(safe-area-inset-bottom, 0px) + 96px)",left:"50%",transform:"translateX(-50%)",zIndex:560,display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:12,background:T.surface,border:`1px solid ${T.accent}`,color:T.text,boxSizing:"border-box",width:"calc(100% - 28px)",maxWidth:420,fontSize:14,boxShadow:"0 4px 20px #0005"}}>
         <span style={{flex:1,minWidth:0}}>Food log updated · {fmtDate(foodUndo.day)}</span>

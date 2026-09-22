@@ -2,6 +2,8 @@ export const APP_VERSION = "2.0.0";
 
 export const CHANGELOG = [
  {version:"2.0.0",date:"Sep 22, 2026",notes:[
+  {text:"Lifetime stats in Settings → Stats: every carb ever counted, goals hit, streaks and your recent pace versus all time",action:"settings"},
+  {text:"A line of light drifts around the screen edge — Subtle, Vivid or off in Settings",action:"settings"},
   {text:"Halloween theme — pumpkin orange and purple, in Settings → Appearance",action:"settings"},
   {text:"Workout comparison popups redesigned: volume bars and set chips instead of paragraphs",action:"workouts"},
   {text:"Room for far more food history, so repeat foods come from your own log instead of the AI",action:"log"},
