@@ -11,7 +11,7 @@ import { APP_VERSION } from "./changelog.js";
 import { addDays, dayNum, dowShort, fmtDate, fmtFull, isToday, todayKey, weekDays, weekStart } from "./dates.js";
 import { HAPTICS_ON, haptic, setHapticsOn } from "./haptics.js";
 import { computeHabits, computeStreak, dayHitsGoal, mealPerContainer, sumDay } from "./stats.js";
-import { DEFAULT_GOALS, DEFAULT_PROFILE, DEFAULT_SETTINGS, WATER_STEP, _get, _set, loadAll, loadBarcodes, loadGoals, loadMeals, loadProfile, loadPrograms, loadSettings, loadStandout, loadTheme, loadWater, loadWeights, loadWorkouts, lookupBarcode, onStorageFailure, pack, saveAll, saveBarcodes, saveGoals, saveMeals, saveProfile, savePrograms, saveSettings, saveStandout, saveTheme, saveWater, saveWeights, saveWorkouts, unpack } from "./storage.js";
+import { DEFAULT_GOALS, DEFAULT_PROFILE, DEFAULT_SETTINGS, WATER_STEP, _get, _set, loadAll, loadBarcodes, loadGoals, loadMeals, loadProfile, loadPrograms, loadSettings, loadStandout, loadTheme, loadWater, loadWeights, loadWorkouts, lookupBarcode, onStorageFailure, saveAll, saveBarcodes, saveGoals, saveMeals, saveProfile, savePrograms, saveSettings, saveStandout, saveTheme, saveWater, saveWeights, saveWorkouts, unpack } from "./storage.js";
 import { T, applyTheme } from "./theme.js";
 import { BarcodeScanner } from "./ui/BarcodeScanner.jsx";
 import { Bubble } from "./ui/Bubble.jsx";
@@ -176,7 +176,8 @@ export default function App() {
   useEffect(()=>{
     const writeSnapshot = () => {
       try {
-        _set("nl4_snapshot", pack(JSON.stringify({ days:allDays, goals, meals, workouts, profile, weights, water, barcodes, standout, theme, ts:Date.now() })));
+        // Left uncompressed: this is the recovery copy a rolled-back build reads.
+        _set("nl4_snapshot", JSON.stringify({ days:allDays, goals, meals, workouts, profile, weights, water, barcodes, standout, theme, ts:Date.now() }));
       } catch {}
     };
     writeSnapshot();

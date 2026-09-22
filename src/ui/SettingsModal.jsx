@@ -142,8 +142,9 @@ export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, on
             background:usedPct>85?T.cal:T.accent,borderRadius:99}}/>
         </div>
         <div style={{fontSize:11,color:T.muted,marginTop:8,lineHeight:1.4}}>
-          Logs are compressed, so this device holds roughly eight times the history it used to.
-          More saved history means more repeat foods answer from your own log instead of the AI.
+          Backup copies are compressed instead of stored full size, leaving noticeably more room
+          for history. More saved history means more repeat foods answer from your own log
+          instead of the AI.
         </div>
       </div>
 

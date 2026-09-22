@@ -17,19 +17,24 @@ export const _set = (k,v) => {
   }
 };
 
+// The primary key stays plain JSON on purpose. A build rolled back to 1.10.5
+// reads the primary first and JSON.parses it directly, so compressing it there
+// would make a downgrade look like total data loss. Only the second copy is
+// compressed, which still removes the full-size duplicate that used to consume
+// half the quota.
 export const dualSave = (key, valueStr) => {
-  const packed = pack(valueStr);
-  if (!_set(key, packed)) return false;
-  _set(key + "_bak", packed);
+  if (!_set(key, valueStr)) return false;
+  _set(key + "_bak", pack(valueStr));
   _set(key + "_ts", String(Date.now()));
   return true;
 };
 export const dualLoadRaw = (key) => {
+  // unpack passes plain values through, so either copy may be in either form.
   const p = unpack(_get(key));
   if (p && p !== "{}" && p !== "[]") return p;
   const b = unpack(_get(key + "_bak"));
   if (b && b !== "{}" && b !== "[]") {
-    _set(key, pack(b));
+    _set(key, b);
     return b;
   }
   return p || b || null;

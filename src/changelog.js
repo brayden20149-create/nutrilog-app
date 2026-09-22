@@ -6,7 +6,7 @@ export const CHANGELOG = [
   {text:"A line of light drifts around the screen edge — Subtle, Vivid or off in Settings",action:"settings"},
   {text:"Halloween theme — pumpkin orange and purple, in Settings → Appearance",action:"settings"},
   {text:"Workout comparison popups redesigned: volume bars and set chips instead of paragraphs",action:"workouts"},
-  {text:"Room for far more food history, so repeat foods come from your own log instead of the AI",action:"log"},
+  {text:"Backup copies are compressed, leaving more room for food history — so repeat foods come from your own log instead of the AI",action:"log"},
   {text:"Storage now warns you when it is full instead of silently dropping a save",action:"settings"},
   {text:"Fixed edge swipe between tabs and the Try buttons in What's New, which both crashed"},
  ]},
