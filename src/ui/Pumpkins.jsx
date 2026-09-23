@@ -49,8 +49,8 @@ export const Pumpkins = () => (
         .nl-pumpkin, .nl-pumpkin > *, .nl-thread { animation: none !important; }
       }
     `}</style>
-    <div aria-hidden="true" style={{position:"fixed",inset:0,pointerEvents:"none",
-      zIndex:1,overflow:"hidden"}}>
+    <div aria-hidden="true" className="nl-scene" style={{position:"fixed",inset:0,
+      pointerEvents:"none",zIndex:1,overflow:"hidden"}}>
       {CAST.map((c, i) => {
         const at = { top:c.top, bottom:c.bottom, left:c.left, right:c.right };
         if (c.kind === "drift") return (

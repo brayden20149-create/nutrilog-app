@@ -21,7 +21,7 @@ import { GlowBorder } from "./ui/GlowBorder.jsx";
 import { HistoryDrawer } from "./ui/HistoryDrawer.jsx";
 import { MealEditor } from "./ui/MealEditor.jsx";
 import { Bar, Confetti, InfoDot, Ring, Toast } from "./ui/primitives.jsx";
-import { Pumpkins } from "./ui/Pumpkins.jsx";
+import { ThemeScenery } from "./ui/ThemeScenery.jsx";
 import { ProfileTab } from "./ui/ProfileTab.jsx";
 import { ProgramsTab } from "./ui/ProgramsTab.jsx";
 import { ScanConfirm } from "./ui/ScanConfirm.jsx";
@@ -1833,7 +1833,7 @@ export default function App() {
           onClose={()=>{ setShowWelcome(false); try{ _set("nl4_seen_version", APP_VERSION); }catch{} }}/>
       )}
       <GlowBorder intensity={settings.glow} width={settings.glowWidth} radius={settings.glowRadius}/>
-      {isHalloween && <Pumpkins/>}
+      <ThemeScenery themeId={theme?.id} enabled={settings.scenery !== false}/>
       {celebrate && <Confetti big={celebrate.big} variant={isHalloween?"bats":undefined}/>}
       {foodUndo && !repeatFood && !editMeal && <div role="status" style={{position:"absolute",bottom:"calc(env(safe-area-inset-bottom, 0px) + 96px)",left:"50%",transform:"translateX(-50%)",zIndex:560,display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:12,background:T.surface,border:`1px solid ${T.accent}`,color:T.text,boxSizing:"border-box",width:"calc(100% - 28px)",maxWidth:420,fontSize:14,boxShadow:"0 4px 20px #0005"}}>
         <span style={{flex:1,minWidth:0}}>Food log updated · {fmtDate(foodUndo.day)}</span>

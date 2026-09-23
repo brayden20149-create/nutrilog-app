@@ -52,6 +52,9 @@ export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, on
       <Row label="Celebrations" sub="Confetti & cheer toasts when you hit goals">
         <Toggle on={settings.celebrations} onClick={()=>onSet("celebrations",!settings.celebrations)}/>
       </Row>
+      <Row label="Theme scenery" sub="Snow, waves, stars, lasers or petals behind your theme">
+        <Toggle on={settings.scenery !== false} onClick={()=>onSet("scenery", settings.scenery === false)}/>
+      </Row>
       <Row label="Edge glow" sub="A line of light that drifts around the screen">
         <Seg value={settings.glow} options={[["off","Off"],["subtle","Subtle"],["vivid","Vivid"]]}
           onPick={v=>onSet("glow",v)}/>

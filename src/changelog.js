@@ -1,6 +1,12 @@
-export const APP_VERSION = "2.2.0";
+export const APP_VERSION = "2.3.0";
 
 export const CHANGELOG = [
+ {version:"2.3.0",date:"Sep 23, 2026",notes:[
+  {text:"Every theme now has its own moving backdrop",action:"settings"},
+  {text:"Snow for Christmas, rolling waves for Beach, a twinkling starfield with comets for Galaxy",action:"settings"},
+  {text:"Lasers firing across Neon, and petals tumbling down Sakura",action:"settings"},
+  {text:"Turn any of it off with Theme scenery in Settings",action:"settings"},
+ ]},
  {version:"2.2.0",date:"Sep 23, 2026",notes:[
   {text:"Five new themes — Christmas, Beach, Galaxy, Neon and Sakura",action:"settings"},
   {text:"Themes are now picked from a grid of miniature previews",action:"settings"},

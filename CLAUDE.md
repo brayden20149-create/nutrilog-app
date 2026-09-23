@@ -38,6 +38,13 @@ archive prefix and must hand those builds **uncompressed** values.
 - Pair `backgroundClip:"text"` with `backgroundImage`, not the `background`
   shorthand. React warns and can drop the clip when it updates a shorthand in
   place, which would turn gradient text into a solid block.
-- Halloween-only flourishes (pumpkins, bats) are gated on `theme?.id === "halloween"`.
+- Ambient backdrops live in `src/ui/ThemeScenery.jsx`, keyed by theme id
+  (`SCENES`). A theme with no entry simply has no scenery. Celebration confetti
+  still switches to bats on `theme?.id === "halloween"` in `App.jsx`.
+- Scenery animates transform and opacity only, so the compositor handles it
+  without relayout. Particle lists MUST be built in `useMemo`: App re-renders on
+  every keystroke, and regenerating the random values restarts every animation
+  mid-flight. Falling effects use negative `animation-delay` so the screen is
+  already populated on the first frame.
 - Pure logic lives in plain `.js` modules so `node --test` can import it
   directly; React components live in `src/ui/*.jsx`.
