@@ -56,14 +56,20 @@ export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, on
         <Seg value={settings.glow} options={[["off","Off"],["subtle","Subtle"],["vivid","Vivid"]]}
           onPick={v=>onSet("glow",v)}/>
       </Row>
-      {settings.glow !== "off" && (
+      {settings.glow !== "off" && <>
         <Row label="Glow width" sub={`Thickness of the border light — ${settings.glowWidth ?? 2}px`}>
           <input type="range" min="1" max="10" step="1" value={settings.glowWidth ?? 2}
             aria-label="Glow width in pixels"
             onChange={e=>onSet("glowWidth", +e.target.value)}
             style={{width:120,accentColor:T.accent,flexShrink:0}}/>
         </Row>
-      )}
+        <Row label="Glow corners" sub={`Match your screen's curve — ${settings.glowRadius ?? 44}px`}>
+          <input type="range" min="0" max="80" step="2" value={settings.glowRadius ?? 44}
+            aria-label="Glow corner radius in pixels"
+            onChange={e=>onSet("glowRadius", +e.target.value)}
+            style={{width:120,accentColor:T.accent,flexShrink:0}}/>
+        </Row>
+      </>}
       <Row label="Default tab" sub="Which tab opens on launch">
         <Seg value={settings.landingTab}
           options={[["chat","💬"],["log","📋"],["workouts","💪"],["train","🏋️"]]}
@@ -183,21 +189,39 @@ export const SettingsModal = ({ current, onApply, onClose, settings, onSet, barc
   const [tab, setTab] = useState("general"); // general | presets | custom
   const currentId = current?.id || (current ? "custom" : "emerald");
 
+  // Each theme is shown as a miniature of the app it produces, so the choice is
+  // made by looking rather than by reading colour names.
   const Swatch = ({ t }) => {
     const selected = currentId===t.id;
+    const accent2 = t.accent2 || t.accent;
     return (
-      <button onClick={()=>onApply({...t})}
-        style={{display:"flex",alignItems:"center",gap:10,width:"100%",
-          background:t.surface,border:`2px solid ${selected?t.accent:T.border}`,
-          borderRadius:12,padding:"12px 14px",cursor:"pointer",marginBottom:8,
+      <button onClick={()=>onApply({...t})} aria-pressed={selected} aria-label={t.name}
+        style={{background:t.surface,border:`2px solid ${selected?t.accent:T.border}`,
+          borderRadius:14,padding:7,cursor:"pointer",textAlign:"left",
+          boxShadow:selected?`0 0 0 3px ${t.accent}33`:"none",
           WebkitTapHighlightColor:"transparent"}}>
-        <div style={{display:"flex",gap:4}}>
-          <span style={{width:18,height:18,borderRadius:"50%",background:t.accent}}/>
-          <span style={{width:18,height:18,borderRadius:"50%",background:t.accent2||t.accent}}/>
-          <span style={{width:18,height:18,borderRadius:"50%",background:t.card,border:`1px solid ${t.border}`}}/>
+        {/* miniature screen */}
+        <div style={{background:t.bg,borderRadius:9,padding:7,height:74,
+          display:"flex",flexDirection:"column",gap:5,overflow:"hidden"}}>
+          <div style={{height:9,borderRadius:3,
+            background:`linear-gradient(135deg,${t.accent} 0%,${accent2} 100%)`}}/>
+          <div style={{display:"flex",gap:4}}>
+            {[t.accent,accent2,t.card].map((c,i)=>(
+              <span key={i} style={{width:13,height:13,borderRadius:"50%",background:c,
+                border:i===2?`1px solid ${t.border}`:"none"}}/>
+            ))}
+          </div>
+          <div style={{background:t.card,border:`1px solid ${t.border}`,borderRadius:5,
+            flex:1,padding:5,display:"flex",flexDirection:"column",gap:4,justifyContent:"center"}}>
+            <div style={{height:4,width:"78%",borderRadius:2,background:t.text,opacity:.75}}/>
+            <div style={{height:4,width:"52%",borderRadius:2,background:t.muted}}/>
+          </div>
         </div>
-        <span style={{flex:1,textAlign:"left",fontSize:14,fontWeight:600,color:t.text}}>{t.name}</span>
-        {selected && <span style={{color:t.accent,fontSize:14,fontWeight:800}}>✓</span>}
+        <div style={{display:"flex",alignItems:"center",gap:4,padding:"7px 3px 1px"}}>
+          <span style={{flex:1,minWidth:0,fontSize:12,fontWeight:700,color:t.text,
+            whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.name}</span>
+          {selected && <span style={{color:t.accent,fontSize:13,fontWeight:800}}>✓</span>}
+        </div>
       </button>
     );
   };
@@ -253,7 +277,9 @@ export const SettingsModal = ({ current, onApply, onClose, settings, onSet, barc
             <LifetimeStats days={allDays} workouts={workouts} goals={goals} water={water} today={today}/>
           ) : tab==="presets" ? (
             <>
-              {THEMES.map(t=><Swatch key={t.id} t={t}/>)}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:12}}>
+                {THEMES.map(t=><Swatch key={t.id} t={t}/>)}
+              </div>
               <button onClick={()=>onApply(null)}
                 style={{width:"100%",background:"none",border:`1px solid ${T.border}`,
                   color:T.muted,borderRadius:10,padding:"11px",fontSize:13,cursor:"pointer",

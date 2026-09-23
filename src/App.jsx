@@ -789,7 +789,11 @@ export default function App() {
 
   return (
     <div
-      key={`theme-${themeVersion}`}
+      // themeVersion is only a re-render trigger. It must NOT be a key: applyTheme
+      // mutates the shared T object, so a plain re-render already repaints every
+      // inline style, while remounting would throw away open menus, drafts and
+      // scroll position every time a theme is picked.
+      data-theme-version={themeVersion}
       onTouchStart={onAppTouchStart} onTouchEnd={onAppTouchEnd}
       style={{
       height:vh, width:"100%", background:T.bg, color:T.text,
@@ -832,7 +836,7 @@ export default function App() {
                 {profile.name ? profile.name.toUpperCase()+"'S FITNESS" : "MACRO INTELLIGENCE"}
               </div>
               <div style={{fontSize:19,fontWeight:800,letterSpacing:"-0.02em",lineHeight:1.2,
-                background:T.gHeader,WebkitBackgroundClip:"text",backgroundClip:"text",
+                backgroundImage:T.gHeader,WebkitBackgroundClip:"text",backgroundClip:"text",
                 WebkitTextFillColor:"transparent"}}>NutriLog</div>
             </div>
           </div>
@@ -1828,7 +1832,7 @@ export default function App() {
           onTry={(a)=>{ try{ _set("nl4_seen_version", APP_VERSION); }catch{} runFeatureAction(a); }}
           onClose={()=>{ setShowWelcome(false); try{ _set("nl4_seen_version", APP_VERSION); }catch{} }}/>
       )}
-      <GlowBorder intensity={settings.glow} width={settings.glowWidth}/>
+      <GlowBorder intensity={settings.glow} width={settings.glowWidth} radius={settings.glowRadius}/>
       {isHalloween && <Pumpkins/>}
       {celebrate && <Confetti big={celebrate.big} variant={isHalloween?"bats":undefined}/>}
       {foodUndo && !repeatFood && !editMeal && <div role="status" style={{position:"absolute",bottom:"calc(env(safe-area-inset-bottom, 0px) + 96px)",left:"50%",transform:"translateX(-50%)",zIndex:560,display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:12,background:T.surface,border:`1px solid ${T.accent}`,color:T.text,boxSizing:"border-box",width:"calc(100% - 28px)",maxWidth:420,fontSize:14,boxShadow:"0 4px 20px #0005"}}>

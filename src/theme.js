@@ -24,6 +24,16 @@ export const THEMES = [
     border:"#2a2e34", text:"#eef1f5", muted:"#6b727d", accent:"#94a3b8", accent2:"#cbd5e1" },
   { id:"halloween", name:"Halloween 🎃", bg:"#0b0710", surface:"#16101f", card:"#1e1529",
     border:"#33203f", text:"#f7ecf7", muted:"#8a6f96", accent:"#ff7518", accent2:"#a855f7" },
+  { id:"christmas", name:"Christmas 🎄", bg:"#07110b", surface:"#0e1d14", card:"#14291c",
+    border:"#20402c", text:"#eff8f1", muted:"#6f9079", accent:"#ef4444", accent2:"#34d399" },
+  { id:"beach", name:"Beach 🏖️", bg:"#05141a", surface:"#0b2530", card:"#11323f",
+    border:"#1b4a5c", text:"#e9f8fa", muted:"#6d99a5", accent:"#f7c873", accent2:"#2dd4bf" },
+  { id:"galaxy", name:"Galaxy 🌌", bg:"#06060f", surface:"#0e0e1f", card:"#15152c",
+    border:"#24244c", text:"#eceafb", muted:"#7070a0", accent:"#818cf8", accent2:"#e879f9" },
+  { id:"neon", name:"Neon 🌃", bg:"#08070d", surface:"#120f1c", card:"#191426",
+    border:"#2e2243", text:"#f3ecff", muted:"#7f719b", accent:"#ff2e97", accent2:"#22d3ee" },
+  { id:"sakura", name:"Sakura 🌸", bg:"#110a0f", surface:"#1d121b", card:"#271925",
+    border:"#3d2839", text:"#fbecf5", muted:"#9d7b91", accent:"#f9a8d4", accent2:"#fb7185" },
 ];
 
 export const applyTheme = (t) => {

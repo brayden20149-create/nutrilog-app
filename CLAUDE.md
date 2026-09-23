@@ -31,6 +31,13 @@ archive prefix and must hand those builds **uncompressed** values.
 - No CSS files; components use inline styles and read theme tokens from
   `src/theme.js` (`T`). `applyTheme` mutates `T` in place, so the object
   identity is shared — import it, don't copy it.
+- `themeVersion` in `App.jsx` exists only to trigger a re-render after
+  `applyTheme`. Never make it a `key`: that remounts the whole tree and throws
+  away open menus, drafts and scroll position on every theme change. Nothing is
+  memoised, so a plain re-render already repaints every inline style.
+- Pair `backgroundClip:"text"` with `backgroundImage`, not the `background`
+  shorthand. React warns and can drop the clip when it updates a shorthand in
+  place, which would turn gradient text into a solid block.
 - Halloween-only flourishes (pumpkins, bats) are gated on `theme?.id === "halloween"`.
 - Pure logic lives in plain `.js` modules so `node --test` can import it
   directly; React components live in `src/ui/*.jsx`.

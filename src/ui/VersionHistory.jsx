@@ -155,7 +155,7 @@ export const WelcomeModal = ({ name, onClose, onTry }) => {
         maxHeight:"86vh",overflowY:"auto"}}>
       <div style={{fontSize:40,marginBottom:10}}>👋</div>
       <div style={{fontSize:24,fontWeight:800,marginBottom:6,
-        background:T.gHeader,WebkitBackgroundClip:"text",backgroundClip:"text",
+        backgroundImage:T.gHeader,WebkitBackgroundClip:"text",backgroundClip:"text",
         WebkitTextFillColor:"transparent"}}>
         Welcome{name?` back, ${name}`:""}!
       </div>

@@ -1,6 +1,13 @@
-export const APP_VERSION = "2.1.0";
+export const APP_VERSION = "2.2.0";
 
 export const CHANGELOG = [
+ {version:"2.2.0",date:"Sep 23, 2026",notes:[
+  {text:"Five new themes — Christmas, Beach, Galaxy, Neon and Sakura",action:"settings"},
+  {text:"Themes are now picked from a grid of miniature previews",action:"settings"},
+  {text:"The edge glow follows your screen's rounded corners; tune the curve in Settings",action:"settings"},
+  {text:"Halloween comes alive: flickering pumpkins, drifting ghosts and bats, spiders on threads",action:"settings"},
+  {text:"Picking a theme no longer bounces you out of the settings screen",action:"settings"},
+ ]},
  {version:"2.1.0",date:"Sep 22, 2026",notes:[
   {text:"Days now step with ‹ and › arrows — tap the date to jump back to today",action:"log"},
   {text:"Glow width is adjustable from 1 to 10 px in Settings",action:"settings"},
