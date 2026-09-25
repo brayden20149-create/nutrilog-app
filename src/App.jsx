@@ -1832,7 +1832,8 @@ export default function App() {
           onTry={(a)=>{ try{ _set("nl4_seen_version", APP_VERSION); }catch{} runFeatureAction(a); }}
           onClose={()=>{ setShowWelcome(false); try{ _set("nl4_seen_version", APP_VERSION); }catch{} }}/>
       )}
-      <GlowBorder intensity={settings.glow} width={settings.glowWidth} radius={settings.glowRadius}/>
+      <GlowBorder intensity={settings.glow} width={settings.glowWidth} radius={settings.glowRadius}
+        speed={settings.glowSpeed} style={settings.glowStyle}/>
       <ThemeScenery themeId={theme?.id} enabled={settings.scenery !== false}/>
       {celebrate && <Confetti big={celebrate.big} variant={isHalloween?"bats":undefined}/>}
       {foodUndo && !repeatFood && !editMeal && <div role="status" style={{position:"absolute",bottom:"calc(env(safe-area-inset-bottom, 0px) + 96px)",left:"50%",transform:"translateX(-50%)",zIndex:560,display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:12,background:T.surface,border:`1px solid ${T.accent}`,color:T.text,boxSizing:"border-box",width:"calc(100% - 28px)",maxWidth:420,fontSize:14,boxShadow:"0 4px 20px #0005"}}>

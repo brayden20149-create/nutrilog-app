@@ -60,6 +60,19 @@ export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, on
           onPick={v=>onSet("glow",v)}/>
       </Row>
       {settings.glow !== "off" && <>
+        <Row label="Glow style" sub={(settings.glowStyle ?? "trail")==="ring"
+          ? "The whole edge stays lit" : "A light laps around the edge"}>
+          <Seg value={settings.glowStyle ?? "trail"} options={[["trail","Trail"],["ring","Ring"]]}
+            onPick={v=>onSet("glowStyle",v)}/>
+        </Row>
+        {(settings.glowStyle ?? "trail") !== "ring" && (
+          <Row label="Glow speed" sub={`One lap every ${(22/(settings.glowSpeed ?? 2)).toFixed(1)}s`}>
+            <input type="range" min="1" max="10" step="1" value={settings.glowSpeed ?? 2}
+              aria-label="Glow speed"
+              onChange={e=>onSet("glowSpeed", +e.target.value)}
+              style={{width:120,accentColor:T.accent,flexShrink:0}}/>
+          </Row>
+        )}
         <Row label="Glow width" sub={`Thickness of the border light — ${settings.glowWidth ?? 2}px`}>
           <input type="range" min="1" max="10" step="1" value={settings.glowWidth ?? 2}
             aria-label="Glow width in pixels"

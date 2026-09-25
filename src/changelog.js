@@ -1,6 +1,10 @@
-export const APP_VERSION = "2.3.0";
+export const APP_VERSION = "2.4.0";
 
 export const CHANGELOG = [
+ {version:"2.4.0",date:"Sep 25, 2026",notes:[
+  {text:"Glow style — keep the lapping trail, or light the whole edge as a constant ring",action:"settings"},
+  {text:"Glow speed is adjustable, from a 22 second crawl to a 2 second lap",action:"settings"},
+ ]},
  {version:"2.3.0",date:"Sep 23, 2026",notes:[
   {text:"Every theme now has its own moving backdrop",action:"settings"},
   {text:"Snow for Christmas, rolling waves for Beach, a twinkling starfield with comets for Galaxy",action:"settings"},

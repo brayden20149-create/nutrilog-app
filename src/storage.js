@@ -99,6 +99,8 @@ export const DEFAULT_SETTINGS = {
   glow:"subtle",        // off | subtle | vivid — travelling light around the screen edge
   glowWidth:2,          // ring thickness in px (1-10)
   glowRadius:44,        // corner radius in px (0-80) — tune to the device's screen curve
+  glowStyle:"trail",    // trail (a light that laps the edge) | ring (whole edge lit, still)
+  glowSpeed:2,          // laps faster as this rises (1-10); only applies to the trail
   scenery:true,         // per-theme ambient backdrop (snow, waves, stars, lasers, petals)
   webSearch:true,       // let the AI search the web for restaurant/brand nutrition data
 };
