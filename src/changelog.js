@@ -1,6 +1,10 @@
-export const APP_VERSION = "2.4.0";
+export const APP_VERSION = "2.4.1";
 
 export const CHANGELOG = [
+ {version:"2.4.1",date:"Sep 25, 2026",notes:[
+  {text:"No more dark band under the app — the screen edges now take your theme's colour",action:"settings"},
+  {text:"The chat bar floats clear of the bottom edge instead of sitting on it",action:"chat"},
+ ]},
  {version:"2.4.0",date:"Sep 25, 2026",notes:[
   {text:"Glow style — keep the lapping trail, or light the whole edge as a constant ring",action:"settings"},
   {text:"Glow speed is adjustable, from a 22 second crawl to a 2 second lap",action:"settings"},

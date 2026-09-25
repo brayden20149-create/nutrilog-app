@@ -168,6 +168,19 @@ export default function App() {
   },[]);
 
   useEffect(()=>{
+    // main.jsx paints html/body a fixed near-black so the page is not white
+    // before the app boots. The app root is a fixed box sized to the visual
+    // viewport, so anything it does not cover — the home-indicator strip on
+    // iPhone — would keep showing that near-black as a bar under the UI.
+    document.documentElement.style.backgroundColor = T.bg;
+    document.body.style.backgroundColor = T.bg;
+    // iOS tints the chrome around a standalone web app from theme-color, which
+    // index.html pins to the default green-black. Left alone it shows as a dark
+    // band under the UI on any other theme.
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", T.bg);
+  },[themeVersion, theme]);
+
+  useEffect(()=>{
     onStorageFailure(reason=>setStorageWarn(reason==="full"
       ? "Storage is full — that change was not saved. Export a backup, then clear old data in Settings."
       : "This browser is blocking storage, so changes will not be saved."));
@@ -937,8 +950,9 @@ export default function App() {
             <div ref={chatEndRef}/>
           </div>
 
-          {/* Input bar */}
-          <div style={{flexShrink:0,paddingBottom:`max(env(safe-area-inset-bottom),14px)`,paddingTop:8}}>
+          {/* Input bar — floats clear of the bottom edge rather than sitting on it */}
+          <div style={{flexShrink:0,paddingTop:8,
+            paddingBottom:`calc(max(env(safe-area-inset-bottom),10px) + 10px)`}}>
             {/* Pending photo preview */}
             {pendingImage && (
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,
@@ -953,8 +967,9 @@ export default function App() {
               </div>
             )}
             <div style={{display:"flex",gap:8,alignItems:"flex-end",
-              background:T.surface,borderRadius:16,
-              padding:"8px 8px 8px 8px",border:`1px solid ${T.border}`}}>
+              background:T.surface,borderRadius:24,
+              padding:8,border:`1px solid ${T.border}`,
+              boxShadow:"0 8px 28px #0008, 0 2px 8px #0006"}}>
               {/* Hidden file input (camera or library) */}
               <input ref={fileRef} type="file" accept="image/*"
                 style={{display:"none"}}
