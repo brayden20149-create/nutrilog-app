@@ -26,6 +26,20 @@ own `helpers.jsx`, reachable from Settings → History. Do not refactor them.
 `createVersionStorage` in `src/appVersions.js` copies `nl4_*` values into an
 archive prefix and must hand those builds **uncompressed** values.
 
+## Full-screen sizing (got this wrong twice — read before touching it)
+
+- Anything that must frame the screen sizes from `window.visualViewport`, never
+  `window.innerHeight` and never a `position:fixed; inset:0` box. On iPhone with
+  `viewport-fit=cover` the layout viewport stays tall while less is on screen, so
+  both of those overshoot and the bottom gets drawn off-display. The app root
+  (`vh` in `App.jsx`) and `GlowBorder` must stay on the same source, and listen to
+  visualViewport's `resize` AND `scroll`.
+- `main.jsx` styles `html, body, #root` in ONE rule with a hardcoded near-black so
+  the page is not white before boot. `#root` is a full-height element sitting
+  under the fixed app root, so repainting only html and body leaves it showing
+  through as a dark band. The theme effect in `App.jsx` must set all three, plus
+  the `theme-color` meta that iOS tints standalone chrome from.
+
 ## Conventions
 
 - No CSS files; components use inline styles and read theme tokens from

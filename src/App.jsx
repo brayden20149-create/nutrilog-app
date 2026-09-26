@@ -86,7 +86,9 @@ export default function App() {
   const inputRef   = useRef(null);
   const fileRef    = useRef(null);
   const [pendingImage, setPendingImage] = useState(null); // food chat {dataUrl, mediaType, base64}
-  const [vh, setVh] = useState(window.innerHeight);
+  // visualViewport from the very first paint, matching what the resize handler
+  // and the glow ring both use — innerHeight disagrees with it on iPhone.
+  const [vh, setVh] = useState(window.visualViewport?.height ?? window.innerHeight);
 
   useEffect(()=>{
     let days = loadAll();

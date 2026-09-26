@@ -1,6 +1,9 @@
-export const APP_VERSION = "2.4.2";
+export const APP_VERSION = "2.4.3";
 
 export const CHANGELOG = [
+ {version:"2.4.3",date:"Sep 26, 2026",notes:[
+  {text:"The glow ring now frames exactly what is on screen, instead of being drawn past the bottom",action:"settings"},
+ ]},
  {version:"2.4.2",date:"Sep 26, 2026",notes:[
   {text:"The dark band under the app is gone for real — the last element painting it now takes your theme",action:"settings"},
   {text:"The glow ring measures the screen itself, so it reaches the true bottom edge",action:"settings"},
