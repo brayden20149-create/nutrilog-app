@@ -15,29 +15,28 @@ const lapSeconds = (speed) => 22 / clamp(speed, 1, 10);
 // rounded rectangle and moved with a travelling dash, so it follows the phone's
 // corner curves exactly — a masked box could only ever give square corners.
 export const GlowBorder = ({ intensity = "subtle", width, radius, speed, style = "trail" }) => {
-  const [size, setSize] = useState({ w: 0, h: 0, x: 0, y: 0 });
+  const [size, setSize] = useState({ w: 0, h: 0 });
 
-  // Track the VISUAL viewport, the same source the app root sizes itself from.
-  // A position:fixed box spans the LAYOUT viewport, and on iPhone the two
-  // disagree — the layout viewport stays tall while less is actually on screen,
-  // so the ring was being drawn past the bottom of the display and clipped.
+  // Take the SIZE from the visual viewport — a position:fixed box spans the
+  // layout viewport, which stays taller than what is on screen on iPhone, and
+  // the ring ends up drawn past the bottom of the display.
+  //
+  // Take the POSITION from nothing: pin it to 0,0 exactly like the app root.
+  // visualViewport.offsetTop is not a correction to apply here — it moves as the
+  // page scrolls, and adding it drags the ring down the screen with the scroll.
   useEffect(() => {
     const vv = window.visualViewport;
     const read = () => {
       const w = vv?.width ?? window.innerWidth;
       const h = vv?.height ?? window.innerHeight;
-      const x = vv?.offsetLeft ?? 0;
-      const y = vv?.offsetTop ?? 0;
-      setSize(prev => (prev.w === w && prev.h === h && prev.x === x && prev.y === y ? prev : { w, h, x, y }));
+      setSize(prev => (prev.w === w && prev.h === h ? prev : { w, h }));
     };
     read();
     vv?.addEventListener("resize", read);
-    vv?.addEventListener("scroll", read);
     window.addEventListener("resize", read);
     window.addEventListener("orientationchange", read);
     return () => {
       vv?.removeEventListener("resize", read);
-      vv?.removeEventListener("scroll", read);
       window.removeEventListener("resize", read);
       window.removeEventListener("orientationchange", read);
     };
@@ -72,7 +71,7 @@ export const GlowBorder = ({ intensity = "subtle", width, radius, speed, style =
         }
       `}</style>
       <div aria-hidden="true"
-        style={{position:"fixed",top:size.y,left:size.x,width:w,height:h,
+        style={{position:"fixed",top:0,left:0,width:w,height:h,
           zIndex:9998,pointerEvents:"none",opacity}}>
       {w > 0 && h > 0 && (
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{display:"block"}}>

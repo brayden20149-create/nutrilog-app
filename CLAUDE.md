@@ -28,12 +28,16 @@ archive prefix and must hand those builds **uncompressed** values.
 
 ## Full-screen sizing (got this wrong twice — read before touching it)
 
-- Anything that must frame the screen sizes from `window.visualViewport`, never
-  `window.innerHeight` and never a `position:fixed; inset:0` box. On iPhone with
-  `viewport-fit=cover` the layout viewport stays tall while less is on screen, so
-  both of those overshoot and the bottom gets drawn off-display. The app root
-  (`vh` in `App.jsx`) and `GlowBorder` must stay on the same source, and listen to
-  visualViewport's `resize` AND `scroll`.
+- Take the SIZE from `window.visualViewport`, never `window.innerHeight` and never
+  a `position:fixed; inset:0` box. On iPhone with `viewport-fit=cover` the layout
+  viewport stays taller than what is on screen, so both overshoot and the bottom
+  is drawn off-display. The app root (`vh` in `App.jsx`) and `GlowBorder` must
+  stay on the same source. Listen to visualViewport's `resize` only.
+- Take the POSITION from nothing: pin to `top:0; left:0`, as the app root does.
+  `visualViewport.offsetTop` is NOT a correction to apply to a `position:fixed`
+  element — it changes as the page scrolls, so adding it drags the element down
+  the screen on every scroll. Do not listen to visualViewport `scroll` either;
+  there is nothing legitimate to do with it here.
 - `main.jsx` styles `html, body, #root` in ONE rule with a hardcoded near-black so
   the page is not white before boot. `#root` is a full-height element sitting
   under the fixed app root, so repainting only html and body leaves it showing

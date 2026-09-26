@@ -1,6 +1,9 @@
-export const APP_VERSION = "2.4.3";
+export const APP_VERSION = "2.4.4";
 
 export const CHANGELOG = [
+ {version:"2.4.4",date:"Sep 26, 2026",notes:[
+  {text:"The glow ring stays put when you scroll instead of sliding down the screen",action:"settings"},
+ ]},
  {version:"2.4.3",date:"Sep 26, 2026",notes:[
   {text:"The glow ring now frames exactly what is on screen, instead of being drawn past the bottom",action:"settings"},
  ]},
