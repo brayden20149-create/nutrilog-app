@@ -5,40 +5,102 @@ import { T, THEMES } from "../theme.js";
 import { LifetimeStats } from "./LifetimeStats.jsx";
 import { VersionHistoryPanel } from "./VersionHistory.jsx";
 
+const Toggle = ({ on, onClick }) => (
+  <button onClick={onClick}
+    style={{width:46,height:28,borderRadius:99,border:"none",cursor:"pointer",flexShrink:0,
+      background:on?T.accent:T.border,position:"relative",transition:"background .2s",
+      WebkitTapHighlightColor:"transparent"}}>
+    <span style={{position:"absolute",top:3,left:on?21:3,width:22,height:22,borderRadius:"50%",
+      background:"#fff",transition:"left .2s"}}/>
+  </button>
+);
+
+const Row = ({ label, sub, children }) => (
+  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+    padding:"12px 0",borderBottom:`1px solid ${T.border}`,gap:12}}>
+    <div style={{flex:1,minWidth:0}}>
+      <div style={{fontSize:14,color:T.text,fontWeight:600}}>{label}</div>
+      {sub && <div style={{fontSize:11,color:T.muted,marginTop:2,lineHeight:1.4}}>{sub}</div>}
+    </div>
+    {children}
+  </div>
+);
+
+const Seg = ({ value, options, onPick }) => (
+  <div style={{display:"flex",gap:4,background:T.bg,border:`1px solid ${T.border}`,
+    borderRadius:9,padding:3,flexShrink:0}}>
+    {options.map(([val,lbl])=>(
+      <button key={val} onClick={()=>onPick(val)}
+        style={{background:value===val?T.accent:"none",color:value===val?"#0b0f0b":T.muted,
+          border:"none",borderRadius:7,padding:"6px 10px",fontSize:12,fontWeight:700,cursor:"pointer",
+          WebkitTapHighlightColor:"transparent"}}>{lbl}</button>
+    ))}
+  </div>
+);
+
+// Replaces the range inputs: a thin slider is fiddly on a phone, where a 120px
+// track has to cover the whole span. Two big targets and a readout are exact.
+const Stepper = ({ value, min, max, step = 1, onChange, label, format = v => v }) => {
+  const atMin = value <= min, atMax = value >= max;
+  const btn = (dim) => ({
+    background:T.card, border:`1px solid ${T.border}`, color:dim?T.muted:T.text,
+    borderRadius:9, minWidth:40, minHeight:40, fontSize:19, lineHeight:1, cursor:dim?"default":"pointer",
+    opacity:dim?0.35:1, display:"flex", alignItems:"center", justifyContent:"center",
+    fontFamily:"inherit", WebkitTapHighlightColor:"transparent",
+  });
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+      <button aria-label={`Decrease ${label}`} disabled={atMin} style={btn(atMin)}
+        onClick={()=>onChange(Math.max(min, value - step))}>−</button>
+      <span aria-live="polite" style={{minWidth:52,textAlign:"center",fontSize:13,fontWeight:700,
+        color:T.text,fontVariantNumeric:"tabular-nums"}}>{format(value)}</span>
+      <button aria-label={`Increase ${label}`} disabled={atMax} style={btn(atMax)}
+        onClick={()=>onChange(Math.min(max, value + step))}>+</button>
+    </div>
+  );
+};
+
+// Glow and scenery live here so the Look tab can show them beside the themes.
+export const AppearanceControls = ({ settings, onSet }) => {
+  const glowOn = settings.glow !== "off";
+  const trail = (settings.glowStyle ?? "trail") !== "ring";
+  return (
+    <div>
+      <Row label="Theme scenery" sub="Snow, waves, stars, lasers or petals behind your theme">
+        <Toggle on={settings.scenery !== false} onClick={()=>onSet("scenery", settings.scenery === false)}/>
+      </Row>
+      <Row label="Edge glow" sub="A light around the screen">
+        <Seg value={settings.glow} options={[["off","Off"],["subtle","Subtle"],["vivid","Vivid"]]}
+          onPick={v=>onSet("glow",v)}/>
+      </Row>
+      {glowOn && <>
+        <Row label="Glow style" sub={trail ? "A light laps around the edge" : "The whole edge stays lit"}>
+          <Seg value={settings.glowStyle ?? "trail"} options={[["trail","Trail"],["ring","Ring"]]}
+            onPick={v=>onSet("glowStyle",v)}/>
+        </Row>
+        {trail && (
+          <Row label="Glow speed" sub={`One lap every ${(22/(settings.glowSpeed ?? 2)).toFixed(0)}s`}>
+            <Stepper label="glow speed" value={settings.glowSpeed ?? 2} min={1} max={10}
+              onChange={v=>onSet("glowSpeed",v)} format={v=>`${v}/10`}/>
+          </Row>
+        )}
+        <Row label="Glow width" sub="Thickness of the border light">
+          <Stepper label="glow width" value={settings.glowWidth ?? 2} min={1} max={10}
+            onChange={v=>onSet("glowWidth",v)} format={v=>`${v}px`}/>
+        </Row>
+        <Row label="Glow corners" sub="Match your screen's curve">
+          <Stepper label="glow corners" value={settings.glowRadius ?? 44} min={0} max={80} step={8}
+            onChange={v=>onSet("glowRadius",v)} format={v=>`${v}px`}/>
+        </Row>
+      </>}
+    </div>
+  );
+};
+
 export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, onClearData }) => {
   const [showCache, setShowCache] = useState(false);
   const usage = useMemo(storageUsage, []);
   const usedPct = Math.round(usage.bytes / usage.limit * 100);
-  const Toggle = ({ on, onClick }) => (
-    <button onClick={onClick}
-      style={{width:46,height:28,borderRadius:99,border:"none",cursor:"pointer",flexShrink:0,
-        background:on?T.accent:T.border,position:"relative",transition:"background .2s",
-        WebkitTapHighlightColor:"transparent"}}>
-      <span style={{position:"absolute",top:3,left:on?21:3,width:22,height:22,borderRadius:"50%",
-        background:"#fff",transition:"left .2s"}}/>
-    </button>
-  );
-  const Row = ({ label, sub, children }) => (
-    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-      padding:"12px 0",borderBottom:`1px solid ${T.border}`,gap:12}}>
-      <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:14,color:T.text,fontWeight:600}}>{label}</div>
-        {sub && <div style={{fontSize:11,color:T.muted,marginTop:2,lineHeight:1.4}}>{sub}</div>}
-      </div>
-      {children}
-    </div>
-  );
-  const Seg = ({ value, options, onPick }) => (
-    <div style={{display:"flex",gap:4,background:T.bg,border:`1px solid ${T.border}`,
-      borderRadius:9,padding:3,flexShrink:0}}>
-      {options.map(([val,lbl])=>(
-        <button key={val} onClick={()=>onPick(val)}
-          style={{background:value===val?T.accent:"none",color:value===val?"#0b0f0b":T.muted,
-            border:"none",borderRadius:7,padding:"6px 10px",fontSize:12,fontWeight:700,cursor:"pointer",
-            WebkitTapHighlightColor:"transparent"}}>{lbl}</button>
-      ))}
-    </div>
-  );
   const cacheKeys = Object.keys(barcodes||{});
   return (
     <div>
@@ -52,40 +114,6 @@ export const GeneralSettings = ({ settings, onSet, barcodes, onDeleteBarcode, on
       <Row label="Celebrations" sub="Confetti & cheer toasts when you hit goals">
         <Toggle on={settings.celebrations} onClick={()=>onSet("celebrations",!settings.celebrations)}/>
       </Row>
-      <Row label="Theme scenery" sub="Snow, waves, stars, lasers or petals behind your theme">
-        <Toggle on={settings.scenery !== false} onClick={()=>onSet("scenery", settings.scenery === false)}/>
-      </Row>
-      <Row label="Edge glow" sub="A line of light that drifts around the screen">
-        <Seg value={settings.glow} options={[["off","Off"],["subtle","Subtle"],["vivid","Vivid"]]}
-          onPick={v=>onSet("glow",v)}/>
-      </Row>
-      {settings.glow !== "off" && <>
-        <Row label="Glow style" sub={(settings.glowStyle ?? "trail")==="ring"
-          ? "The whole edge stays lit" : "A light laps around the edge"}>
-          <Seg value={settings.glowStyle ?? "trail"} options={[["trail","Trail"],["ring","Ring"]]}
-            onPick={v=>onSet("glowStyle",v)}/>
-        </Row>
-        {(settings.glowStyle ?? "trail") !== "ring" && (
-          <Row label="Glow speed" sub={`One lap every ${(22/(settings.glowSpeed ?? 2)).toFixed(1)}s`}>
-            <input type="range" min="1" max="10" step="1" value={settings.glowSpeed ?? 2}
-              aria-label="Glow speed"
-              onChange={e=>onSet("glowSpeed", +e.target.value)}
-              style={{width:120,accentColor:T.accent,flexShrink:0}}/>
-          </Row>
-        )}
-        <Row label="Glow width" sub={`Thickness of the border light — ${settings.glowWidth ?? 2}px`}>
-          <input type="range" min="1" max="10" step="1" value={settings.glowWidth ?? 2}
-            aria-label="Glow width in pixels"
-            onChange={e=>onSet("glowWidth", +e.target.value)}
-            style={{width:120,accentColor:T.accent,flexShrink:0}}/>
-        </Row>
-        <Row label="Glow corners" sub={`Match your screen's curve — ${settings.glowRadius ?? 44}px`}>
-          <input type="range" min="0" max="80" step="2" value={settings.glowRadius ?? 44}
-            aria-label="Glow corner radius in pixels"
-            onChange={e=>onSet("glowRadius", +e.target.value)}
-            style={{width:120,accentColor:T.accent,flexShrink:0}}/>
-        </Row>
-      </>}
       <Row label="Default tab" sub="Which tab opens on launch">
         <Seg value={settings.landingTab}
           options={[["chat","💬"],["log","📋"],["workouts","💪"],["train","🏋️"]]}
@@ -302,7 +330,11 @@ export const SettingsModal = ({ current, onApply, onClose, settings, onSet, barc
                   marginTop:4,marginBottom:16,WebkitTapHighlightColor:"transparent"}}>
                 Reset to default
               </button>
-              <div style={{fontSize:10,color:T.accent,letterSpacing:"0.12em",marginBottom:10}}>
+              <div style={{fontSize:10,color:T.accent,letterSpacing:"0.12em",marginBottom:2}}>
+                MOTION {'&'} GLOW
+              </div>
+              <AppearanceControls settings={settings} onSet={onSet}/>
+              <div style={{fontSize:10,color:T.accent,letterSpacing:"0.12em",margin:"20px 0 10px"}}>
                 CUSTOM COLORS
               </div>
               <div style={{fontSize:12,color:T.muted,marginBottom:10,lineHeight:1.5}}>

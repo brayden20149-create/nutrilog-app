@@ -172,8 +172,13 @@ export default function App() {
     // before the app boots. The app root is a fixed box sized to the visual
     // viewport, so anything it does not cover — the home-indicator strip on
     // iPhone — would keep showing that near-black as a bar under the UI.
+    // All three: main.jsx styles `html, body, #root` together, and #root is a
+    // full-height element sitting UNDER the fixed app root — miss it and its
+    // near-black still shows wherever the app root falls short.
     document.documentElement.style.backgroundColor = T.bg;
     document.body.style.backgroundColor = T.bg;
+    const root = document.getElementById("root");
+    if (root) root.style.backgroundColor = T.bg;
     // iOS tints the chrome around a standalone web app from theme-color, which
     // index.html pins to the default green-black. Left alone it shows as a dark
     // band under the UI on any other theme.

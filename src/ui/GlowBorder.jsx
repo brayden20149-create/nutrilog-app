@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { T } from "../theme.js";
 
 // subtle is the default: visible in peripheral vision, never competing with content.
@@ -15,24 +15,29 @@ const lapSeconds = (speed) => 22 / clamp(speed, 1, 10);
 // rounded rectangle and moved with a travelling dash, so it follows the phone's
 // corner curves exactly — a masked box could only ever give square corners.
 export const GlowBorder = ({ intensity = "subtle", width, radius, speed, style = "trail" }) => {
-  const [size, setSize] = useState(() => ({
-    w: typeof window === "undefined" ? 0 : window.innerWidth,
-    h: typeof window === "undefined" ? 0 : window.innerHeight,
-  }));
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  const boxRef = useRef(null);
 
+  // Measure the fixed box itself rather than window.innerHeight. With
+  // viewport-fit=cover the two disagree on iPhone, and trusting the window left
+  // the ring's bottom arc floating above the real screen edge.
   useEffect(() => {
-    const onResize = () => setSize({ w: window.innerWidth, h: window.innerHeight });
-    onResize();
-    window.addEventListener("resize", onResize);
-    window.addEventListener("orientationchange", onResize);
-    return () => {
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("orientationchange", onResize);
+    const el = boxRef.current;
+    if (!el) return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      setSize(prev => (Math.round(prev.w) === Math.round(r.width) && Math.round(prev.h) === Math.round(r.height)
+        ? prev : { w: r.width, h: r.height }));
     };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener("orientationchange", measure);
+    return () => { ro.disconnect(); window.removeEventListener("orientationchange", measure); };
   }, []);
 
   const level = LEVELS[intensity];
-  if (!level || !size.w || !size.h) return null;
+  if (!level) return null;
   const { opacity, tail } = level;
   const ring = style === "ring";
   const seconds = lapSeconds(Number.isFinite(+speed) ? +speed : level.speed);
@@ -59,8 +64,10 @@ export const GlowBorder = ({ intensity = "subtle", width, radius, speed, style =
           .nl-glow-spinner { animation: none !important; }
         }
       `}</style>
-      <svg aria-hidden="true" width={w} height={h} viewBox={`0 0 ${w} ${h}`}
-        style={{position:"fixed",top:0,left:0,zIndex:9998,pointerEvents:"none",opacity}}>
+      <div ref={boxRef} aria-hidden="true"
+        style={{position:"fixed",inset:0,zIndex:9998,pointerEvents:"none",opacity}}>
+      {w > 0 && h > 0 && (
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{display:"block"}}>
         <defs>
           <linearGradient id="nlGlowGrad" x1="0" y1="0" x2={w} y2={h} gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor={T.accent2}/>
@@ -77,6 +84,8 @@ export const GlowBorder = ({ intensity = "subtle", width, radius, speed, style =
             filter:`drop-shadow(0 0 ${Math.max(4, stroke * 2)}px ${T.accent})`,
           }}/>
       </svg>
+      )}
+      </div>
     </>
   );
 };

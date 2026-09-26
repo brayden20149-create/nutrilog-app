@@ -1,6 +1,12 @@
-export const APP_VERSION = "2.4.1";
+export const APP_VERSION = "2.4.2";
 
 export const CHANGELOG = [
+ {version:"2.4.2",date:"Sep 26, 2026",notes:[
+  {text:"The dark band under the app is gone for real — the last element painting it now takes your theme",action:"settings"},
+  {text:"The glow ring measures the screen itself, so it reaches the true bottom edge",action:"settings"},
+  {text:"Glow and scenery settings moved in with the themes, under Look",action:"settings"},
+  {text:"Fiddly sliders replaced with − / + steppers you can actually hit",action:"settings"},
+ ]},
  {version:"2.4.1",date:"Sep 25, 2026",notes:[
   {text:"No more dark band under the app — the screen edges now take your theme's colour",action:"settings"},
   {text:"The chat bar floats clear of the bottom edge instead of sitting on it",action:"chat"},
