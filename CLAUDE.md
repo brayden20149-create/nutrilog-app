@@ -26,6 +26,28 @@ own `helpers.jsx`, reachable from Settings → History. Do not refactor them.
 `createVersionStorage` in `src/appVersions.js` copies `nl4_*` values into an
 archive prefix and must hand those builds **uncompressed** values.
 
+## The API route
+
+- System prompts live in `api/_lib/prompts.js` and must never reach the browser.
+  The client posts a prompt NAME (`assistant` / `ingredients` / `nutrients`) plus
+  the conversation; the server owns the text. Putting a prompt back in `src/`
+  would re-open the endpoint as a steerable Claude proxy on the owner's key.
+- `api/_lib/` is underscore-prefixed on purpose: Vercel turns every other file
+  under `api/` into a public route. Shared code must stay in `_lib`.
+- The frozen builds under `src/versions/*` still post their own `system` string,
+  so `api/chat.js` keeps a legacy path that accepts one. Do not remove it, and do
+  not "fix" those builds to use the new shape — they are frozen.
+- The assistant prompt is split in two blocks: the big stable half carries
+  `cache_control`, and search mode + style hint go AFTER it. Anything varying
+  that moves into the first block silently costs a full-price prefix on every
+  request. `tests/apiChat.test.js` asserts the stable block never varies.
+- The origin check compares the request's `Origin`/`Referer` host to its own
+  host, so Vercel preview deployments work without configuration. `ALLOWED_ORIGINS`
+  (comma-separated hosts) is the escape hatch for anything cross-origin.
+- Sonnet 5.5 runs adaptive thinking whenever `thinking` is omitted, and thinking
+  tokens count against `max_tokens`. That is why `max_tokens` is 4000 rather than
+  the old 1500 — lowering it truncates the JSON mid-object.
+
 ## Full-screen sizing (got this wrong twice — read before touching it)
 
 - Take the SIZE from `window.visualViewport`, never `window.innerHeight` and never

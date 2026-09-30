@@ -1,6 +1,11 @@
-export const APP_VERSION = "2.4.4";
+export const APP_VERSION = "2.5.0";
 
 export const CHANGELOG = [
+ {version:"2.5.0",date:"Sep 30, 2026",notes:[
+  {text:"The assistant runs on a newer, cheaper model and now checks its own macro arithmetic",action:"chat"},
+  {text:"Requests are a fraction of their old size, so logging food is quicker to send",action:"chat"},
+  {text:"The AI endpoint no longer accepts instructions from the browser, and throttles abuse"},
+ ]},
  {version:"2.4.4",date:"Sep 26, 2026",notes:[
   {text:"The glow ring stays put when you scroll instead of sliding down the screen",action:"settings"},
  ]},
